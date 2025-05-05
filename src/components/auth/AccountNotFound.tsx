@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Home, UserPlus, LogIn } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export default function AccountNotFound() {
+interface AccountNotFoundProps {
+  accountExists?: boolean;
+}
+
+export default function AccountNotFound({ accountExists = false }: AccountNotFoundProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isExistingAccount, setIsExistingAccount] = useState(false);
@@ -13,8 +17,8 @@ export default function AccountNotFound() {
   const [countdown, setCountdown] = useState(2);
   
   useEffect(() => {
-    const accountExists = searchParams.get("accountExists") === "true";
-    if (accountExists) {
+    const accountExistsParam = searchParams.get("accountExists") === "true" || accountExists;
+    if (accountExistsParam) {
       setIsExistingAccount(true);
       setRedirecting(true);
       
@@ -32,7 +36,7 @@ export default function AccountNotFound() {
       
       return () => clearInterval(timer);
     }
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, accountExists]);
 
   const handleRegister = () => {
     // Redirect to login page with register tab active

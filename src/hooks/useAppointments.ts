@@ -1,142 +1,119 @@
 
 import { useState, useEffect } from "react";
-import { randevuServisi, isletmeServisi } from "@/lib/supabase";
+import { randevuServisi } from "@/lib/supabase";
 import { Randevu, RandevuDurum } from "@/lib/supabase/types";
 import { toast } from "sonner";
 
-export interface UseAppointmentsProps {
+interface UseAppointmentsProps {
   isletmeId?: string;
   personelId?: string;
   musteriId?: string;
-  tarih?: string;
+  initialDate?: string;
+  autoFetch?: boolean;
 }
 
-export function useAppointments(props?: UseAppointmentsProps) {
-  const [randevular, setRandevular] = useState<Randevu[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<any>(null);
-  
-  // For compatibility with existing code
+export const useAppointments = ({ 
+  isletmeId, 
+  personelId, 
+  musteriId, 
+  initialDate, 
+  autoFetch = true 
+}: UseAppointmentsProps = {}) => {
   const [appointments, setAppointments] = useState<Randevu[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [filters, setFilters] = useState<Partial<UseAppointmentsProps>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [filters, setFilters] = useState({
+    date: initialDate || new Date().toISOString().split('T')[0],
+    personelId: personelId || "",
+    status: ""
+  });
 
-  useEffect(() => {
-    yenile();
-  }, [props]);
+  const fetchAppointments = async () => {
+    if (!isletmeId && !personelId && !musteriId) {
+      console.error("isletmeId, personelId veya musteriId gereklidir");
+      return;
+    }
 
-  const yenile = async () => {
+    setIsLoading(true);
     try {
-      setLoading(true);
-      setIsLoading(true);
-      setError(null);
-      
-      let veri: Randevu[] = [];
-      
-      // Eğer isletmeId belirtilmişse, o işletmeye ait randevuları getir
-      if (props?.isletmeId) {
-        veri = await randevuServisi.isletmeyeGoreGetir(props.isletmeId);
-      } 
-      // Eğer personelId belirtilmişse, o personele ait randevuları getir
-      else if (props?.personelId) {
-        veri = await randevuServisi.personeleGoreGetir(props.personelId);
-      }
-      // Eğer musteriId belirtilmişse, o müşteriye ait randevuları getir
-      else if (props?.musteriId) {
-        veri = await randevuServisi.musteriyeGoreGetir(props.musteriId);
-      }
-      // Eğer tarih belirtilmişse ve işletmeId de varsa, o tarihe ait randevuları getir
-      else if (props?.tarih && props?.isletmeId) {
-        veri = await randevuServisi.tariheGoreGetir(props.isletmeId, props.tarih);
-      }
-      // Hiçbir parametre belirtilmemişse, kullanıcının işletmesine ait tüm randevuları getir
-      else {
-        const isletmeId = await isletmeServisi.getCurrentUserIsletmeId();
-        if (isletmeId) {
-          veri = await randevuServisi.isletmeyeGoreGetir(isletmeId);
+      let randevular: Randevu[] = [];
+
+      if (isletmeId) {
+        if (filters.date) {
+          randevular = await randevuServisi.tariheGoreGetir(isletmeId, filters.date);
+        } else {
+          randevular = await randevuServisi.isletmeyeGoreGetir(isletmeId);
         }
+      } else if (personelId) {
+        randevular = await randevuServisi.personeleGoreGetir(personelId);
+      } else if (musteriId) {
+        randevular = await randevuServisi.musteriyeGoreGetir(musteriId);
+      }
+
+      // Filtreler uygulanıyor
+      if (filters.personelId) {
+        randevular = randevular.filter(r => r.personel_id === filters.personelId);
       }
       
-      setRandevular(veri);
-      setAppointments(veri);
-    } catch (err) {
-      console.error("Randevular alınırken hata:", err);
-      setError(err);
-      toast.error("Randevular yüklenirken bir hata oluştu");
+      if (filters.status) {
+        randevular = randevular.filter(r => r.durum === filters.status);
+      }
+
+      setAppointments(randevular);
+    } catch (error) {
+      console.error("Randevular alınırken hata:", error);
+      toast.error("Randevular alınamadı");
     } finally {
-      setLoading(false);
       setIsLoading(false);
     }
   };
 
-  const durumGuncelle = async (randevuKimlik: string, durum: RandevuDurum): Promise<boolean> => {
+  useEffect(() => {
+    if (autoFetch) {
+      fetchAppointments();
+    }
+  }, [isletmeId, personelId, musteriId, filters.date, filters.personelId, filters.status, autoFetch]);
+
+  // Randevu durumunu güncelleme
+  const updateAppointmentStatus = async (appointmentId: string, newStatus: RandevuDurum) => {
     try {
-      const basarili = await randevuServisi.durumGuncelle(randevuKimlik, durum);
+      const updatedAppointment = await randevuServisi.durumGuncelle(appointmentId, newStatus);
       
-      if (basarili) {
-        // Başarılıysa state'i güncelle
-        setRandevular((eskiRandevular) =>
-          eskiRandevular.map((randevu) =>
-            randevu.kimlik === randevuKimlik ? { ...randevu, durum } : randevu
+      if (updatedAppointment) {
+        setAppointments(prev => 
+          prev.map(appt => 
+            appt.id === updatedAppointment.id ? updatedAppointment : appt
           )
         );
-        setAppointments((eskiRandevular) =>
-          eskiRandevular.map((randevu) =>
-            randevu.kimlik === randevuKimlik ? { ...randevu, durum } : randevu
-          )
-        );
-        
         toast.success("Randevu durumu güncellendi");
-        return true;
       }
-      
-      return false;
-    } catch (err) {
-      console.error("Randevu durumu güncellenirken hata:", err);
+    } catch (error) {
+      console.error("Randevu durumu güncellenirken hata:", error);
       toast.error("Randevu durumu güncellenemedi");
-      return false;
     }
   };
 
-  const randevuSil = async (randevuKimlik: string): Promise<boolean> => {
+  // Randevu silme
+  const deleteAppointment = async (appointmentId: string) => {
     try {
-      const basarili = await randevuServisi.sil(randevuKimlik);
+      const success = await randevuServisi.sil(appointmentId);
       
-      if (basarili) {
-        // Başarılıysa state'ten sil
-        setRandevular((eskiRandevular) =>
-          eskiRandevular.filter((randevu) => randevu.kimlik !== randevuKimlik)
-        );
-        setAppointments((eskiRandevular) =>
-          eskiRandevular.filter((randevu) => randevu.kimlik !== randevuKimlik)
-        );
-        
+      if (success) {
+        setAppointments(prev => prev.filter(appt => appt.id !== appointmentId));
         toast.success("Randevu silindi");
-        return true;
       }
-      
-      return false;
-    } catch (err) {
-      console.error("Randevu silinirken hata:", err);
+    } catch (error) {
+      console.error("Randevu silinirken hata:", error);
       toast.error("Randevu silinemedi");
-      return false;
     }
   };
-
-  // For existing code compatibility
-  const refetch = yenile;
 
   return {
-    randevular,
     appointments,
-    loading,
     isLoading,
-    error,
-    yenile,
-    refetch,
-    durumGuncelle,
-    randevuSil,
     filters,
-    setFilters
+    setFilters,
+    fetchAppointments,
+    updateAppointmentStatus,
+    deleteAppointment
   };
-}
+};

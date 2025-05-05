@@ -62,6 +62,11 @@ export const calismaSaatleriServisi = {
     }
   },
   
+  // Toplu güncelleme için yeni fonksiyon
+  async topluGuncelle(calismaSaatleri: Partial<CalismaSaati>[]): Promise<CalismaSaati[] | null> {
+    return this.guncelle(calismaSaatleri);
+  },
+  
   // İşletme çalışma saatlerini getir (compatibility with older code)
   async isletmeSaatleriGetir(isletmeId: string): Promise<CalismaSaati[]> {
     return this.isletmeyeGoreGetir(isletmeId);

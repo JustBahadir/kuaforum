@@ -133,7 +133,7 @@ export default function AuthGoogleCallback() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
             <Button 
-              onClick={() => navigate("/auth")} 
+              onClick={() => navigate("/login")} 
               className="w-full"
             >
               Giriş Sayfasına Dön

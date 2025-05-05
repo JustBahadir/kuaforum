@@ -36,8 +36,8 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
       try {
         const userShop = await isletmeServisi.kullaniciIsletmesiniGetir();
         if (userShop) {
-          setUserShopCode(userShop.isletme_kodu);
-          setShopCode(userShop.isletme_kodu);
+          setUserShopCode(userShop.kod);
+          setShopCode(userShop.kod);
         }
       } catch (error) {
         console.error("İşletme kodu yüklenirken hata:", error);

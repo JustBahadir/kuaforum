@@ -2,7 +2,7 @@
 // Enum definitions
 export type KullaniciRol = "isletme_sahibi" | "personel" | "musteri";
 export type PersonelDurum = "aktif" | "izinli" | "cikti";
-export type RandevuDurum = "bekliyor" | "onaylandi" | "iptal" | "tamamlandi";
+export type RandevuDurum = "bekliyor" | "onaylandi" | "iptal" | "tamamlandi" | "planlandi";
 export type BasvuruDurum = "beklemede" | "onaylandi" | "reddedildi";
 
 // Base entity with common properties for all entities
@@ -25,6 +25,7 @@ export interface Kullanici extends BaseEntity {
 
 export interface Isletme extends BaseEntity {
   kimlik: string;
+  id: string; // UUID format
   kod: string;
   ad: string;
   adres?: string;
@@ -66,23 +67,32 @@ export interface Personel extends BaseEntity {
 
 export interface IslemKategorisi extends BaseEntity {
   id: string | number;
+  kimlik: string;
   kategori_adi: string;
+  baslik: string;
   aciklama?: string;
   isletme_id: string;
+  isletme_kimlik: string;
   sira?: number;
 }
 
 export interface Hizmet extends BaseEntity {
   id: string | number;
+  kimlik: string;
   islem_adi: string;
+  hizmet_adi: string;
   aciklama?: string;
   fiyat: number;
   suresi?: number;
+  sure_dakika?: number;
   kategori_id: string | number;
+  kategori_kimlik?: string;
   isletme_id: string;
+  isletme_kimlik: string;
   aktif: boolean;
   puan?: number;
   resim_url?: string;
+  siralama?: number;
 }
 
 export interface Musteri extends BaseEntity {
@@ -103,8 +113,10 @@ export interface Musteri extends BaseEntity {
 
 export interface Randevu extends BaseEntity {
   id: string | number;
+  kimlik: string;
   isletme_id: string;
   musteri_id: string | number;
+  musteri_kimlik: string;
   personel_id: string | number;
   tarih: string;
   saat: string;

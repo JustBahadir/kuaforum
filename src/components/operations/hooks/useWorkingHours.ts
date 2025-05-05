@@ -1,80 +1,135 @@
 
 import { useState, useEffect } from "react";
+import { calismaSaatleriServisi } from "@/lib/supabase";
 import { CalismaSaati } from "@/lib/supabase/types";
-import { calismaSaatleriServisi, isletmeServisi } from "@/lib/supabase";
-import { defaultCalismaSaatleriOlustur, getDefaultWorkingHours } from "../utils/workingHoursUtils";
 import { toast } from "sonner";
 
-export function useWorkingHours() {
-  const [calisma_saatleri, setCalisma_saatleri] = useState<CalismaSaati[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  
+// Varsayılan çalışma saatleri oluşturma
+const getDefaultWorkingHours = (): Partial<CalismaSaati>[] => {
+  return [
+    { gun: "Pazartesi", acilis: "09:00", kapanis: "18:00", kapali: false },
+    { gun: "Salı", acilis: "09:00", kapanis: "18:00", kapali: false },
+    { gun: "Çarşamba", acilis: "09:00", kapanis: "18:00", kapali: false },
+    { gun: "Perşembe", acilis: "09:00", kapanis: "18:00", kapali: false },
+    { gun: "Cuma", acilis: "09:00", kapanis: "18:00", kapali: false },
+    { gun: "Cumartesi", acilis: "10:00", kapanis: "16:00", kapali: false },
+    { gun: "Pazar", acilis: "10:00", kapanis: "16:00", kapali: true }
+  ];
+};
+
+// Gün isimleri
+export const gunIsimleri = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
+
+export const useWorkingHours = (isletmeId: string) => {
+  const [calisma_saatleri, setCalisma_saatleri] = useState<Partial<CalismaSaati>[]>(getDefaultWorkingHours());
+  const [yukleniyor, setYukleniyor] = useState(true);
+  const [kaydetmeBasarili, setKaydetmeBasarili] = useState<boolean | null>(null);
+
+  // Çalışma saatlerini getir
   useEffect(() => {
-    fetchWorkingHours();
-  }, []);
-  
-  const fetchWorkingHours = async () => {
+    const saatleriGetir = async () => {
+      if (!isletmeId) return;
+
+      try {
+        setYukleniyor(true);
+        const saatler = await calismaSaatleriServisi.isletmeyeGoreGetir(isletmeId);
+        
+        if (saatler && saatler.length > 0) {
+          setCalisma_saatleri(saatler);
+        } else {
+          // İşletmeye ait çalışma saati yoksa varsayılan saatleri kaydet
+          const yeniSaatler = getDefaultWorkingHours().map(saat => ({
+            ...saat,
+            isletme_id: isletmeId
+          }));
+          
+          const kaydedilenSaatler = await calismaSaatleriServisi.topluGuncelle(yeniSaatler);
+          if (kaydedilenSaatler) {
+            setCalisma_saatleri(kaydedilenSaatler);
+          }
+        }
+      } catch (error) {
+        console.error("Çalışma saatleri yüklenirken hata:", error);
+        toast.error("Çalışma saatleri yüklenemedi");
+      } finally {
+        setYukleniyor(false);
+      }
+    };
+
+    saatleriGetir();
+  }, [isletmeId]);
+
+  // Çalışma saatlerini güncelle
+  const saatleriGuncelle = (index: number, alan: string, deger: string) => {
+    const guncelSaatler = [...calisma_saatleri];
+    guncelSaatler[index] = { 
+      ...guncelSaatler[index], 
+      [alan]: deger 
+    };
+    setCalisma_saatleri(guncelSaatler);
+  };
+
+  // Tüm çalışma saatlerini kaydet
+  const saatleriKaydet = async () => {
+    if (!isletmeId) return null;
+
     try {
-      setLoading(true);
-      setError(null);
+      setYukleniyor(true);
+      const guncelSaatler = calisma_saatleri.map(saat => ({
+        ...saat,
+        isletme_id: isletmeId
+      }));
       
-      // Get current user's business ID
-      const isletmeId = await isletmeServisi.getCurrentUserIsletmeId();
+      const kaydedilenSaatler = await calismaSaatleriServisi.topluGuncelle(guncelSaatler);
       
-      if (!isletmeId) {
-        throw new Error("İşletme kimliği bulunamadı");
+      if (kaydedilenSaatler) {
+        setCalisma_saatleri(kaydedilenSaatler);
+        setKaydetmeBasarili(true);
+        toast.success("Çalışma saatleri kaydedildi");
+        return kaydedilenSaatler;
       }
       
-      // Get working hours for the business
-      let saatler = await calismaSaatleriServisi.isletmeyeGoreGetir(isletmeId);
-      
-      // If no working hours exist, create default ones
-      if (saatler.length === 0) {
-        const varsayilanSaatler = defaultCalismaSaatleriOlustur(isletmeId);
-        await calismaSaatleriServisi.topluGuncelle(varsayilanSaatler);
-        saatler = varsayilanSaatler;
-      }
-      
-      setCalisma_saatleri(saatler);
-    } catch (error: any) {
-      console.error("Çalışma saatleri getirilirken hata:", error);
-      setError(error);
-      toast.error("Çalışma saatleri yüklenirken bir hata oluştu");
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const updateWorkingHour = (id: string, updates: Partial<CalismaSaati>) => {
-    setCalisma_saatleri((prevSaatler) => 
-      prevSaatler.map((saat) => 
-        saat.id === id ? { ...saat, ...updates } : saat
-      )
-    );
-  };
-  
-  const saveWorkingHours = async () => {
-    try {
-      setLoading(true);
-      await calismaSaatleriServisi.topluGuncelle(calisma_saatleri);
-      toast.success("Çalışma saatleri başarıyla kaydedildi");
-      return true;
-    } catch (error: any) {
+      setKaydetmeBasarili(false);
+      toast.error("Çalışma saatleri kaydedilemedi");
+      return null;
+    } catch (error) {
       console.error("Çalışma saatleri kaydedilirken hata:", error);
-      toast.error("Çalışma saatleri kaydedilirken bir hata oluştu");
-      return false;
+      setKaydetmeBasarili(false);
+      toast.error("Çalışma saatleri kaydedilemedi");
+      return null;
     } finally {
-      setLoading(false);
+      setYukleniyor(false);
     }
   };
-  
+
+  // Günü kapalı yap
+  const gunuKapaliYap = (index: number, kapali: boolean) => {
+    const guncelSaatler = [...calisma_saatleri];
+    guncelSaatler[index] = { 
+      ...guncelSaatler[index], 
+      kapali 
+    };
+    setCalisma_saatleri(guncelSaatler);
+  };
+
+  // Bütün günleri aç
+  const butunGunleriAc = () => {
+    const guncelSaatler = calisma_saatleri.map(saat => ({
+      ...saat,
+      kapali: false
+    }));
+    setCalisma_saatleri(guncelSaatler);
+  };
+
+  // Çalışma saatlerini dışa aktar
   return {
     calisma_saatleri,
-    loading,
-    error,
-    updateWorkingHour,
-    saveWorkingHours,
-    yenile: fetchWorkingHours
+    gunIsimleri,
+    yukleniyor,
+    kaydetmeBasarili,
+    saatleriGuncelle,
+    saatleriKaydet,
+    gunuKapaliYap,
+    butunGunleriAc
   };
-}
+};

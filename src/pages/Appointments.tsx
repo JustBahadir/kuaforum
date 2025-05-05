@@ -1,251 +1,267 @@
-
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useAppointments } from "@/hooks/useAppointments";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarRange, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { useAppointments } from "@/hooks/useAppointments";
-import { personelServisi, isletmeServisi } from "@/lib/supabase";
-import { Personel, RandevuDurum } from "@/lib/supabase/types";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Randevu, RandevuDurum } from "@/lib/supabase/types";
+
+interface AppointmentCardProps {
+  appointment: Randevu;
+  onApprove: (appointment: Randevu) => void;
+  onCancel: (appointment: Randevu) => void;
+  onComplete: (appointment: Randevu) => void;
+  onDelete: (appointment: Randevu) => void;
+  selectedTab: RandevuDurum;
+}
+
+const AppointmentCard: React.FC<AppointmentCardProps> = ({ 
+  appointment, 
+  onApprove, 
+  onCancel, 
+  onComplete,
+  onDelete,
+  selectedTab
+}) => {
+  return (
+    <div className="border rounded-lg p-4 bg-white">
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="font-medium">{appointment.musteri_kimlik}</p>
+          <p className="text-sm text-gray-500">
+            {appointment.tarih} - {appointment.saat}
+          </p>
+          <p className="text-sm text-gray-500">
+            Hizmetler: {appointment.islemler.join(', ')}
+          </p>
+          {appointment.notlar && (
+            <p className="text-sm mt-2">Not: {appointment.notlar}</p>
+          )}
+        </div>
+        
+        <div className="flex space-x-2">
+          {selectedTab === "bekliyor" && (
+            <>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => onApprove(appointment)}
+              >
+                Onayla
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="text-red-600 border-red-600"
+                onClick={() => onCancel(appointment)}
+              >
+                İptal
+              </Button>
+            </>
+          )}
+          
+          {selectedTab === "onaylandi" && (
+            <>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => onComplete(appointment)}
+              >
+                Tamamlandı
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="text-red-600 border-red-600"
+                onClick={() => onCancel(appointment)}
+              >
+                İptal
+              </Button>
+            </>
+          )}
+          
+          {(selectedTab === "iptal" || selectedTab === "tamamlandi") && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="text-red-600 border-red-600"
+              onClick={() => onDelete(appointment)}
+            >
+              Sil
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function Appointments() {
-  const [date, setDate] = useState<Date>(new Date());
-  const [view, setView] = useState<"day" | "week" | "all">("day");
-  const [personelListesi, setPersonelListesi] = useState<Personel[]>([]);
-  const [selectedPersonelId, setSelectedPersonelId] = useState<string | "all">("all");
+  // Get shop ID from context/state/storage
+  const isletmeId = "your-shop-id"; // Replace with actual shop ID
   
-  // Use the appointment hook
-  const {
-    randevular,
-    loading,
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [selectedTab, setSelectedTab] = useState<RandevuDurum>("bekliyor");
+  const [selectedAppointment, setSelectedAppointment] = useState<Randevu | null>(null);
+  const [actionType, setActionType] = useState<string>("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const { 
+    appointments, 
+    isLoading, 
+    fetchAppointments,
+    updateAppointmentStatus,
+    deleteAppointment,
     filters,
-    setFilters,
-    yenile
+    setFilters
   } = useAppointments({
-    date: format(date, "yyyy-MM-dd")
+    isletmeId,
+    date: date ? format(date, 'yyyy-MM-dd') : undefined
   });
 
-  // Fetch staff on mount
-  useEffect(() => {
-    const fetchStaff = async () => {
-      try {
-        // Get current user's business
-        const isletme = await isletmeServisi.kullaniciIsletmesiniGetir();
-        if (isletme) {
-          // Get staff for this business
-          const personel = await personelServisi.isletmeyeGoreGetir(isletme.kimlik);
-          setPersonelListesi(personel);
-        }
-      } catch (error) {
-        console.error("Personel listesi alınamadı:", error);
-      }
-    };
-    
-    fetchStaff();
-  }, []);
-
-  // Handle date change
-  const handleDateChange = (newDate: Date | undefined) => {
+  // Set the date filter when the calendar selection changes
+  const handleDateSelect = (newDate: Date | undefined) => {
+    setDate(newDate);
     if (newDate) {
-      setDate(newDate);
-      yenile();
+      setFilters(prev => ({ ...prev, date: format(newDate, 'yyyy-MM-dd') }));
     }
   };
-  
-  // Render appointment status badges
-  const renderStatusBadge = (status: RandevuDurum) => {
-    switch (status) {
-      case "planlandi":
-        return <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">Planlandı</span>;
-      case "tamamlandi":
-        return <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">Tamamlandı</span>;
-      case "iptal":
-        return <span className="text-xs px-2 py-1 bg-red-100 text-red-800 rounded-full">İptal</span>;
-      default:
-        return null;
+
+  // Filter appointments based on selected tab/status
+  const filteredAppointments = appointments.filter(appointment => 
+    appointment.durum === selectedTab
+  );
+
+  // Handle action confirmation (approve, cancel, complete)
+  const handleConfirmAction = async () => {
+    if (!selectedAppointment) return;
+    
+    if (actionType === 'approve') {
+      await updateAppointmentStatus(selectedAppointment.kimlik, "onaylandi");
+    } else if (actionType === 'cancel') {
+      await updateAppointmentStatus(selectedAppointment.kimlik, "iptal");
+    } else if (actionType === 'complete') {
+      await updateAppointmentStatus(selectedAppointment.kimlik, "tamamlandi");
+    } else if (actionType === 'plan') {
+      await updateAppointmentStatus(selectedAppointment.kimlik, "planlandi" as RandevuDurum);
+    } else if (actionType === 'delete') {
+      await deleteAppointment(selectedAppointment.kimlik);
+    }
+    
+    setIsDialogOpen(false);
+    setSelectedAppointment(null);
+  };
+
+  // Handle action button clicks
+  const handleAction = (appointment: Randevu, action: string) => {
+    setSelectedAppointment(appointment);
+    setActionType(action);
+    setIsDialogOpen(true);
+  };
+
+  // Generate dialog title based on action type
+  const getDialogTitle = () => {
+    switch (actionType) {
+      case 'approve': 
+        return 'Randevu Onaylanacak';
+      case 'cancel': 
+        return 'Randevu İptal Edilecek';
+      case 'complete': 
+        return 'Randevu Tamamlandı Olarak İşaretlenecek';
+      case 'plan': 
+        return 'Randevu Planlandı Olarak İşaretlenecek';
+      case 'delete': 
+        return 'Randevu Silinecek';
+      default: 
+        return 'Randevu Durumu Değişecek';
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h2 className="text-3xl font-bold tracking-tight">Randevular</h2>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-6">Randevu Yönetimi</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Calendar Card */}
+        <Card className="md:col-span-1">
+          <CardContent className="p-4">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={handleDateSelect}
+              locale={tr}
+              className="rounded-md border"
+            />
+            <p className="mt-2 text-center text-sm text-gray-500">
+              {date ? `Seçili tarih: ${format(date, 'dd MMMM yyyy', { locale: tr })}` : 'Tarih seçiniz'}
+            </p>
+          </CardContent>
+        </Card>
         
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={() => setDate(new Date())}>
-            Bugün
-          </Button>
-          
-          <div className="relative">
-            <Button
-              variant="outline"
-              className="w-[240px] justify-start text-left font-normal"
-            >
-              <CalendarRange className="mr-2 h-4 w-4" />
-              {format(date, "PPP", { locale: tr })}
-            </Button>
-            <div className="absolute top-full z-50 mt-2">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={handleDateChange}
-                className="hidden rounded-md border bg-popover p-3 shadow-md"
-              />
-            </div>
-          </div>
-        </div>
+        {/* Appointments List */}
+        <Card className="md:col-span-2">
+          <CardContent className="p-4">
+            <Tabs value={selectedTab} onValueChange={(value) => setSelectedTab(value as RandevuDurum)}>
+              <TabsList className="grid grid-cols-4 mb-4">
+                <TabsTrigger value="bekliyor">Bekleyen</TabsTrigger>
+                <TabsTrigger value="onaylandi">Onaylanan</TabsTrigger>
+                <TabsTrigger value="iptal">İptal</TabsTrigger>
+                <TabsTrigger value="tamamlandi">Tamamlanan</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value={selectedTab}>
+                {isLoading ? (
+                  <div className="text-center py-8">
+                    <p>Randevular yükleniyor...</p>
+                  </div>
+                ) : filteredAppointments.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Bu durumda randevu bulunmamaktadır.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredAppointments.map((appointment) => (
+                      <AppointmentCard
+                        key={appointment.id}
+                        appointment={appointment}
+                        onApprove={(appointment) => handleAction(appointment, 'approve')}
+                        onCancel={(appointment) => handleAction(appointment, 'cancel')}
+                        onComplete={(appointment) => handleAction(appointment, 'complete')}
+                        onDelete={(appointment) => handleAction(appointment, 'delete')}
+                        selectedTab={selectedTab}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
-
-      <Tabs defaultValue="day" onValueChange={(v) => setView(v as "day" | "week" | "all")}>
-        <div className="flex justify-between items-center">
-          <TabsList>
-            <TabsTrigger value="day">Günlük</TabsTrigger>
-            <TabsTrigger value="week">Haftalık</TabsTrigger>
-            <TabsTrigger value="all">Tümü</TabsTrigger>
-          </TabsList>
-          
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select
-              value={selectedPersonelId}
-              onValueChange={setSelectedPersonelId}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Personel Seç" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Personel</SelectItem>
-                {personelListesi.map((personel) => (
-                  <SelectItem key={personel.kimlik} value={personel.kimlik}>
-                    {personel.kullanici_kimlik} {/* Actually should use ad_soyad */}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <TabsContent value="day" className="pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                {format(date, "d MMMM yyyy, EEEE", { locale: tr })}
-              </CardTitle>
-              <CardDescription>
-                Bu gün için planlanmış tüm randevular
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-r-transparent"></div>
-                </div>
-              ) : randevular.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Bu gün için randevu bulunamadı
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {randevular.map((randevu) => (
-                    <div
-                      key={randevu.kimlik}
-                      className="flex justify-between items-center p-4 rounded-lg border"
-                    >
-                      <div>
-                        <p className="font-medium">{randevu.tarih} - {randevu.saat}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Müşteri: {randevu.musteri_kimlik || "Belirtilmemiş"}
-                        </p>
-                        <div className="mt-2">
-                          {renderStatusBadge(randevu.durum)}
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">
-                          Detaylar
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="week" className="pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Haftalık Görünüm</CardTitle>
-              <CardDescription>
-                Bu hafta için planlanmış tüm randevular
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Weekly view implementation */}
-              <div className="text-center py-8 text-muted-foreground">
-                Haftalık görünüm yakında eklenecek
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="all" className="pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tüm Randevular</CardTitle>
-              <CardDescription>
-                Planlanmış tüm randevuları görüntüleyin
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-r-transparent"></div>
-                </div>
-              ) : randevular.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Henüz randevu bulunamadı
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {randevular.map((randevu) => (
-                    <div
-                      key={randevu.kimlik}
-                      className="flex justify-between items-center p-4 rounded-lg border"
-                    >
-                      <div>
-                        <p className="font-medium">{randevu.tarih} - {randevu.saat}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Müşteri: {randevu.musteri_kimlik || "Belirtilmemiş"}
-                        </p>
-                        <div className="mt-2">
-                          {renderStatusBadge(randevu.durum)}
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">
-                          Detaylar
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      
+      {/* Confirmation Dialog */}
+      <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{getDialogTitle()}</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmAction}>Onayla</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
