@@ -11,7 +11,7 @@ export function useAuth() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [isletmeId, setIsletmeId] = useState<string | null>(null);
-  const [dukkanId, setDukkanId] = useState<string | null>(null); // For backward compatibility
+  const [dukkanId, setDukkanId] = useState<string | number | null>(null); // For backward compatibility
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -69,7 +69,7 @@ export function useAuth() {
         // Try to get business from isletmeler table
         const { data, error } = await supabase
           .from('isletmeler')
-          .select('kimlik')
+          .select('kimlik, id')
           .eq('sahip_kimlik', userId)
           .maybeSingle();
           
@@ -79,7 +79,7 @@ export function useAuth() {
         
         if (data) {
           setIsletmeId(data.kimlik);
-          setDukkanId(data.kimlik); // For backward compatibility
+          setDukkanId(data.id); // For backward compatibility
         }
       } catch (err) {
         console.error('Error in fetchUserBusiness:', err);

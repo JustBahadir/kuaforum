@@ -1,166 +1,168 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Edit, Clock } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { supabase } from '@/lib/supabase/client';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { calismaSaatleriServisi } from "@/lib/supabase";
+import { defaultCalismaSaatleriOlustur, gunler } from "../operations/utils/workingHoursUtils";
+import { CalismaSaati } from "@/lib/supabase/types";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ShopWorkingHoursCardProps {
-  calisma_saatleri: any[];
-  userRole: string;
-  dukkanId: string | number;
+  isletmeId: string;
 }
 
-export function ShopWorkingHoursCard({ calisma_saatleri, userRole, dukkanId }: ShopWorkingHoursCardProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [workingHours, setWorkingHours] = useState<any[]>([...calisma_saatleri]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export function ShopWorkingHoursCard({ isletmeId }: ShopWorkingHoursCardProps) {
+  const [calismaSaatleri, setCalismaSaatleri] = useState<CalismaSaati[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { user } = useAuth();
 
-  const dayNames: Record<string, string> = {
-    'Pazartesi': 'Pazartesi',
-    'Sali': 'Salı',
-    'Carsamba': 'Çarşamba',
-    'Persembe': 'Perşembe',
-    'Cuma': 'Cuma',
-    'Cumartesi': 'Cumartesi',
-    'Pazar': 'Pazar'
-  };
+  // Saat seçenekleri
+  const saatSecenekleri = [];
+  for (let i = 0; i < 24; i++) {
+    for (let j = 0; j < 60; j += 30) {
+      const saat = `${i.toString().padStart(2, '0')}:${j.toString().padStart(2, '0')}`;
+      saatSecenekleri.push(saat);
+    }
+  }
+  saatSecenekleri.push("23:59");
 
-  const dayOrder = ['Pazartesi', 'Sali', 'Carsamba', 'Persembe', 'Cuma', 'Cumartesi', 'Pazar'];
+  // Çalışma saatlerini yükle
+  useEffect(() => {
+    if (!isletmeId) return;
 
-  const sortedHours = [...workingHours].sort((a, b) => {
-    return dayOrder.indexOf(a.gun) - dayOrder.indexOf(b.gun);
-  });
-
-  const handleHoursChange = (index: number, field: 'acilis' | 'kapanis', value: string) => {
-    const updatedHours = [...workingHours];
-    updatedHours[index][field] = value;
-    setWorkingHours(updatedHours);
-  };
-
-  const handleClosedToggle = (index: number) => {
-    const updatedHours = [...workingHours];
-    updatedHours[index].kapali = !updatedHours[index].kapali;
-    setWorkingHours(updatedHours);
-  };
-
-  const handleSave = async () => {
-    try {
-      setIsSubmitting(true);
-      
-      for (const hour of workingHours) {
-        const { error } = await supabase
-          .from('calisma_saatleri')
-          .update({
-            acilis: hour.acilis,
-            kapanis: hour.kapanis,
-            kapali: hour.kapali
-          })
-          .eq('id', hour.id);
-          
-        if (error) throw error;
+    const saatleriYukle = async () => {
+      setLoading(true);
+      try {
+        const saatler = await calismaSaatleriServisi.isletmeyeGoreGetir(isletmeId);
+        
+        if (saatler && saatler.length > 0) {
+          setCalismaSaatleri(saatler);
+        } else {
+          // İşletme için varsayılan çalışma saatleri oluştur
+          const varsayilanSaatler = defaultCalismaSaatleriOlustur(isletmeId);
+          setCalismaSaatleri(varsayilanSaatler);
+        }
+      } catch (error) {
+        console.error("Çalışma saatleri yüklenirken hata:", error);
+        toast.error("Çalışma saatleri yüklenirken bir sorun oluştu.");
+      } finally {
+        setLoading(false);
       }
+    };
+
+    saatleriYukle();
+  }, [isletmeId]);
+
+  // Çalışma saatlerini güncelle
+  const handleSaatGuncelle = (index: number, alan: keyof CalismaSaati, deger: any) => {
+    const yeniSaatler = [...calismaSaatleri];
+    yeniSaatler[index] = {
+      ...yeniSaatler[index],
+      [alan]: deger
+    };
+    setCalismaSaatleri(yeniSaatler);
+  };
+
+  // Tüm değişiklikleri kaydet
+  const handleKaydet = async () => {
+    if (calismaSaatleri.length === 0) return;
+    
+    setSaving(true);
+    try {
+      // Her birini ayrı ayrı güncelleyelim ya da hepsini toplu güncelleyelim
+      const sonuc = await calismaSaatleriServisi.topluGuncelle(
+        calismaSaatleri.map(saat => ({
+          ...saat,
+          isletme_id: isletmeId
+        }))
+      );
       
-      toast.success('Çalışma saatleri güncellendi');
-      setIsEditing(false);
+      if (sonuc) {
+        toast.success("Çalışma saatleri başarıyla güncellendi.");
+        setCalismaSaatleri(sonuc);
+      }
     } catch (error) {
-      console.error('Çalışma saatleri güncellenirken hata:', error);
-      toast.error('Çalışma saatleri güncellenemedi');
+      console.error("Çalışma saatleri kaydedilirken hata:", error);
+      toast.error("Çalışma saatleri kaydedilirken bir sorun oluştu.");
     } finally {
-      setIsSubmitting(false);
+      setSaving(false);
     }
   };
 
-  const canEdit = userRole === 'admin' || userRole === 'isletme_sahibi';
-
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg font-medium flex items-center">
-          <Clock className="mr-2 h-5 w-5 text-primary" />
-          Çalışma Saatleri
-        </CardTitle>
-        {canEdit && (
-          <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
-            <Edit className="h-4 w-4 mr-1" />
-            Düzenle
-          </Button>
-        )}
+      <CardHeader>
+        <CardTitle>Çalışma Saatleri</CardTitle>
       </CardHeader>
-      <CardContent className="pt-2">
-        {sortedHours.length > 0 ? (
-          <div className="space-y-2">
-            {sortedHours.map((hour) => (
-              <div key={hour.id} className="flex justify-between items-center py-1 border-b last:border-b-0">
-                <span className="font-medium">{dayNames[hour.gun] || hour.gun}</span>
-                <span className="text-gray-600">
-                  {hour.kapali 
-                    ? 'Kapalı' 
-                    : `${hour.acilis} - ${hour.kapanis}`}
-                </span>
-              </div>
-            ))}
+      <CardContent>
+        {loading ? (
+          <div className="flex justify-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
           </div>
         ) : (
-          <div className="text-center py-4 text-gray-500">
-            Çalışma saatleri ayarlanmamış
-          </div>
-        )}
-      </CardContent>
-
-      <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Çalışma Saatlerini Düzenle</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {workingHours.sort((a, b) => dayOrder.indexOf(a.gun) - dayOrder.indexOf(b.gun)).map((hour, index) => (
-              <div key={hour.id} className="grid grid-cols-[1fr,2fr] gap-4 items-center">
-                <span className="font-medium">{dayNames[hour.gun] || hour.gun}</span>
-                <div className="flex items-center space-x-2">
+          <div className="space-y-4">
+            {calismaSaatleri.map((saat, index) => (
+              <div key={index} className="grid grid-cols-[120px_1fr] gap-4 items-center">
+                <Label>{saat.gun}</Label>
+                <div className="grid grid-cols-[1fr_80px_1fr_80px] gap-2 items-center">
+                  <Select
+                    value={saat.acilis}
+                    onValueChange={(value) => handleSaatGuncelle(index, "acilis", value)}
+                    disabled={saat.kapali}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Açılış" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {saatSecenekleri.map((s) => (
+                        <SelectItem key={`acilis-${s}`} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-center">-</span>
+                  <Select
+                    value={saat.kapanis}
+                    onValueChange={(value) => handleSaatGuncelle(index, "kapanis", value)}
+                    disabled={saat.kapali}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Kapanış" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {saatSecenekleri.map((s) => (
+                        <SelectItem key={`kapanis-${s}`} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={hour.kapali}
-                      onChange={() => handleClosedToggle(index)}
-                      id={`closed-${hour.id}`}
-                      className="rounded border-gray-300 text-primary focus:ring-primary"
+                    <Switch
+                      id={`kapali-${index}`}
+                      checked={!saat.kapali}
+                      onCheckedChange={(checked) => handleSaatGuncelle(index, "kapali", !checked)}
                     />
-                    <label htmlFor={`closed-${hour.id}`} className="text-sm">Kapalı</label>
+                    <Label htmlFor={`kapali-${index}`} className="text-sm">Açık</Label>
                   </div>
-                  {!hour.kapali && (
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="time"
-                        value={hour.acilis}
-                        onChange={(e) => handleHoursChange(index, 'acilis', e.target.value)}
-                        className="w-24 text-xs px-2 py-1 border rounded"
-                      />
-                      <span>-</span>
-                      <input
-                        type="time"
-                        value={hour.kapanis}
-                        onChange={(e) => handleHoursChange(index, 'kapanis', e.target.value)}
-                        className="w-24 text-xs px-2 py-1 border rounded"
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
-          </div>
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
-              İptal
+            
+            <Button 
+              onClick={handleKaydet} 
+              disabled={saving || !user}
+              className="w-full mt-4"
+            >
+              {saving ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
             </Button>
-            <Button onClick={handleSave} disabled={isSubmitting}>
-              {isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
-            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
+      </CardContent>
     </Card>
   );
 }
+
+export default ShopWorkingHoursCard;

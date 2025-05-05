@@ -103,11 +103,10 @@ export function RouteProtection({ children, allowedRoles = [] }: RouteProtection
           setError("Bu sayfaya erişim izniniz bulunmamaktadır.");
           return;
         }
-        
-        setLoading(false);
       } catch (err) {
         console.error("Oturum kontrolü hatası:", err);
         setError("Bir hata oluştu. Lütfen tekrar giriş yapmayı deneyin.");
+      } finally {
         setLoading(false);
       }
     };

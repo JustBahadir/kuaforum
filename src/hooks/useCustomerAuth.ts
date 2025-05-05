@@ -16,7 +16,7 @@ export function useCustomerAuth() {
   const [user, setUser] = useState<any>(null);
   const [profileData, setProfileData] = useState<any>(null);
   const [isletmeId, setIsletmeId] = useState<string | null>(null);
-  const [dukkanId, setDukkanId] = useState<string | null>(null); // For backward compatibility
+  const [dukkanId, setDukkanId] = useState<string | number | null>(null); // For backward compatibility
   
   const navigate = useNavigate();
 
@@ -139,7 +139,7 @@ export function useCustomerAuth() {
     try {
       const { data, error } = await supabase
         .from("isletmeler")
-        .select("kimlik")
+        .select("kimlik, id")
         .eq("sahip_kimlik", userId)
         .maybeSingle();
         
@@ -149,7 +149,7 @@ export function useCustomerAuth() {
       
       if (data) {
         setIsletmeId(data.kimlik);
-        setDukkanId(data.kimlik); // For backward compatibility
+        setDukkanId(data.id); // For backward compatibility
       }
     } catch (error) {
       console.error("Error in fetchUserBusiness:", error);

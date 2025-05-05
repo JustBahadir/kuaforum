@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AccountNotFound from "@/components/auth/AccountNotFound";
+import { profilServisi } from "@/lib/supabase/services/profilServisi";
 
 export default function AuthGoogleCallback() {
   const [loading, setLoading] = useState(true);
@@ -45,7 +46,7 @@ export default function AuthGoogleCallback() {
 
         console.log("Auth callback - User:", user.email);
 
-        // Check for user profile in kullanicilar table
+        // Check for user profile in kullanicilar table (newer structure)
         const { data: kullanici, error: kullaniciError } = await supabase
           .from("kullanicilar")
           .select("*")
@@ -72,7 +73,7 @@ export default function AuthGoogleCallback() {
           }
         }
         
-        // If user exists in kullanicilar table
+        // If user exists in kullanicilar (newer structure)
         if (kullanici) {
           console.log("Found user in kullanicilar table:", kullanici);
           
