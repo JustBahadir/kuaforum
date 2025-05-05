@@ -1,248 +1,211 @@
 
-import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { BriefcaseIcon, PercentIcon, Banknote } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { personelServisi } from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-range-picker-adapter";
+import { toast } from 'sonner';
+import { personelServisi } from '@/lib/supabase';
+import { Personel } from '@/lib/supabase/types';
 
 interface WorkInfoTabProps {
-  personnel: any;
-  onEdit?: () => void;
-  canEdit?: boolean;
+  personel: Personel;
+  onUpdate?: () => void;
+  readOnly?: boolean;
 }
 
-export function WorkInfoTab({ personnel, onEdit, canEdit = true }: WorkInfoTabProps) {
-  const queryClient = useQueryClient();
-  const [isEditing, setIsEditing] = useState(false);
-  const [workSystem, setWorkSystem] = useState(personnel.calisma_sistemi === 'komisyon' ? 'komisyonlu' : 'maasli');
-  const [paymentPeriod, setPaymentPeriod] = useState(personnel.calisma_sistemi || 'aylik');
-  const [salary, setSalary] = useState(personnel.maas && personnel.maas > 0 ? personnel.maas.toString() : '');
-  const [commission, setCommission] = useState(personnel.prim_yuzdesi && personnel.prim_yuzdesi > 0 ? personnel.prim_yuzdesi.toString() : '');
-
-  const updateMutation = useMutation({
-    mutationFn: async (data: any) => {
-      if (workSystem === 'komisyonlu') {
-        data.calisma_sistemi = 'komisyon'; // Ensure the correct value is sent to the server
-      }
-      console.log("Sending update data:", data);
-      return await personelServisi.guncelle(personnel.id, data);
-    },
-    onSuccess: () => {
-      toast.success("Personel bilgileri başarıyla güncellendi!");
-      queryClient.invalidateQueries({ queryKey: ["personeller"] });
-      queryClient.invalidateQueries({ queryKey: ["personel-list"] });
-      queryClient.invalidateQueries({ queryKey: ["personel"] });
-      setIsEditing(false);
-      if (onEdit) onEdit();
-    },
-    onError: (error) => {
-      console.error("Update error:", error);
-      toast.error("Personel güncellenirken bir hata oluştu.");
-    },
+export function WorkInfoTab({ personel, onUpdate, readOnly = false }: WorkInfoTabProps) {
+  const [formData, setFormData] = useState({
+    unvan: personel.unvan || '',
+    gorev: personel.gorev || '',
+    calisma_sistemi: personel.calisma_sistemi || '',
+    maas: personel.maas || 0,
+    prim_yuzdesi: personel.prim_yuzdesi || 0,
+    ise_baslama_tarihi: personel.ise_baslama_tarihi ? new Date(personel.ise_baslama_tarihi) : null,
+    personel_no: personel.personel_no || '',
+    izin_baslangic: personel.izin_baslangic ? new Date(personel.izin_baslangic) : null,
+    izin_bitis: personel.izin_bitis ? new Date(personel.izin_bitis) : null,
+    iban: personel.iban || '',
   });
 
-  const handleSave = () => {
+  const [loading, setLoading] = useState(false);
+
+  const handleUpdate = async () => {
+    if (readOnly) return;
+    
+    setLoading(true);
     try {
-      // Parse the string values to numbers, defaulting to 0 if empty
-      const parsedSalary = salary ? parseInt(salary, 10) : 0;
-      const parsedCommission = commission ? parseInt(commission, 10) : 0;
+      await personelServisi.guncelle(personel.id.toString(), {
+        unvan: formData.unvan || null,
+        gorev: formData.gorev || null,
+        calisma_sistemi: formData.calisma_sistemi || null,
+        maas: formData.maas || 0,
+        prim_yuzdesi: formData.prim_yuzdesi || 0,
+        ise_baslama_tarihi: formData.ise_baslama_tarihi ? formData.ise_baslama_tarihi.toISOString() : null,
+        personel_no: formData.personel_no || null,
+        izin_baslangic: formData.izin_baslangic ? formData.izin_baslangic.toISOString() : null,
+        izin_bitis: formData.izin_bitis ? formData.izin_bitis.toISOString() : null,
+        iban: formData.iban || null,
+      });
       
-      // Validate input values before submission
-      if (workSystem === 'komisyonlu' && (parsedCommission < 0 || parsedCommission > 100)) {
-        toast.error("Prim yüzdesi 0-100 arasında olmalıdır.");
-        return;
-      }
-      
-      if (workSystem === 'maasli' && parsedSalary < 0) {
-        toast.error("Maaş tutarı sıfırdan büyük olmalıdır.");
-        return;
-      }
-      
-      // Prepare the data for submission
-      const updateData: Record<string, any> = {};
-      
-      if (workSystem === 'komisyonlu') {
-        updateData.calisma_sistemi = 'komisyon';
-        updateData.prim_yuzdesi = parsedCommission;
-        updateData.maas = 0; // Set salary to 0 for commission-based workers
-      } else {
-        updateData.calisma_sistemi = paymentPeriod; // aylik, haftalik, gunluk
-        updateData.maas = parsedSalary;
-        updateData.prim_yuzdesi = 0; // Set commission to 0 for salaried workers
-      }
-      
-      console.log("Submitting update data:", updateData);
-      updateMutation.mutate(updateData);
+      toast.success("Personel bilgileri güncellendi");
+      if (onUpdate) onUpdate();
     } catch (error) {
-      console.error("Save error:", error);
-      toast.error("İşlem sırasında bir hata oluştu. Lütfen tekrar deneyin.");
+      console.error("Personel güncellenirken hata:", error);
+      toast.error("Personel güncellenirken bir hata oluştu");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const EditableContent = () => (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <Label>Çalışma Sistemi</Label>
-        <RadioGroup
-          value={workSystem}
-          onValueChange={setWorkSystem}
-          className="flex flex-col space-y-2"
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="maasli" id="maasli" />
-            <Label htmlFor="maasli">Maaşlı</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="komisyonlu" id="komisyonlu" />
-            <Label htmlFor="komisyonlu">Komisyonlu</Label>
-          </div>
-        </RadioGroup>
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="unvan">Ünvan</Label>
+          <Input
+            id="unvan"
+            value={formData.unvan}
+            onChange={(e) => setFormData({ ...formData, unvan: e.target.value })}
+            placeholder="Örn: Kuaför, Asistan"
+            disabled={readOnly}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="gorev">Görev</Label>
+          <Input
+            id="gorev"
+            value={formData.gorev}
+            onChange={(e) => setFormData({ ...formData, gorev: e.target.value })}
+            placeholder="Örn: Saç Kesimi, Renklendirme"
+            disabled={readOnly}
+          />
+        </div>
       </div>
-
-      {workSystem === 'maasli' && (
-        <div className="space-y-4">
-          <Label>Maaş Dönemi</Label>
-          <RadioGroup
-            value={paymentPeriod}
-            onValueChange={setPaymentPeriod}
-            className="flex space-x-4"
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="calisma-sistemi">Çalışma Sistemi</Label>
+          <Select
+            value={formData.calisma_sistemi}
+            onValueChange={(value) => setFormData({ ...formData, calisma_sistemi: value })}
+            disabled={readOnly}
           >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="aylik" id="aylik" />
-              <Label htmlFor="aylik">Aylık</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="haftalik" id="haftalik" />
-              <Label htmlFor="haftalik">Haftalık</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="gunluk" id="gunluk" />
-              <Label htmlFor="gunluk">Günlük</Label>
-            </div>
-          </RadioGroup>
-
+            <SelectTrigger id="calisma-sistemi">
+              <SelectValue placeholder="Seçiniz" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="tam-zamanli">Tam Zamanlı</SelectItem>
+              <SelectItem value="yarim-zamanli">Yarım Zamanlı</SelectItem>
+              <SelectItem value="freelance">Freelance</SelectItem>
+              <SelectItem value="stajyer">Stajyer</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="ise-baslama-tarihi">İşe Başlama Tarihi</Label>
+          <DatePicker
+            id="ise-baslama-tarihi"
+            date={formData.ise_baslama_tarihi || undefined}
+            onSelect={(date) => setFormData({ ...formData, ise_baslama_tarihi: date || null })}
+            disabled={readOnly}
+          />
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="maas">Maaş (₺)</Label>
+          <Input
+            id="maas"
+            type="number"
+            value={formData.maas || ''}
+            onChange={(e) => setFormData({ ...formData, maas: parseFloat(e.target.value) || 0 })}
+            placeholder="0.00"
+            disabled={readOnly}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="prim-yuzdesi">Prim Yüzdesi (%)</Label>
+          <Input
+            id="prim-yuzdesi"
+            type="number"
+            value={formData.prim_yuzdesi || ''}
+            onChange={(e) => setFormData({ ...formData, prim_yuzdesi: parseFloat(e.target.value) || 0 })}
+            placeholder="0"
+            disabled={readOnly}
+            min={0}
+            max={100}
+          />
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="personel-no">Personel No</Label>
+          <Input
+            id="personel-no"
+            value={formData.personel_no}
+            onChange={(e) => setFormData({ ...formData, personel_no: e.target.value })}
+            placeholder="Personel numarası"
+            disabled={readOnly}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="iban">IBAN</Label>
+          <Input
+            id="iban"
+            value={formData.iban}
+            onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
+            placeholder="TR00 0000 0000 0000 0000 0000 00"
+            disabled={readOnly}
+          />
+        </div>
+      </div>
+      
+      <div className="border-t pt-4 mt-4">
+        <h3 className="font-medium mb-4">İzin Bilgileri</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Maaş Tutarı</Label>
-            <Input
-              value={salary}
-              onChange={(e) => setSalary(e.target.value.replace(/\D/g, ''))}
-              placeholder="Maaş tutarını girin (₺)"
-              className="placeholder:text-muted-foreground"
-              type="text"
-              inputMode="numeric"
+            <Label htmlFor="izin-baslangic">İzin Başlangıç</Label>
+            <DatePicker
+              id="izin-baslangic"
+              date={formData.izin_baslangic || undefined}
+              onSelect={(date) => setFormData({ ...formData, izin_baslangic: date || null })}
+              disabled={readOnly}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="izin-bitis">İzin Bitiş</Label>
+            <DatePicker
+              id="izin-bitis"
+              date={formData.izin_bitis || undefined}
+              onSelect={(date) => setFormData({ ...formData, izin_bitis: date || null })}
+              disabled={readOnly}
             />
           </div>
         </div>
-      )}
-
-      {workSystem === 'komisyonlu' && (
-        <div className="space-y-2">
-          <Label>Prim Yüzdesi (%)</Label>
-          <Input
-            value={commission}
-            onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, '');
-              const num = parseInt(value, 10);
-              if (!value) {
-                setCommission('');
-              } else if (!isNaN(num) && num >= 0 && num <= 100) {
-                setCommission(num.toString());
-              }
-            }}
-            placeholder="Prim yüzdesini girin (0-100)"
-            className="placeholder:text-muted-foreground"
-            type="text"
-            inputMode="numeric"
-          />
+      </div>
+      
+      {!readOnly && (
+        <div className="flex justify-end mt-6">
+          <Button onClick={handleUpdate} disabled={loading}>
+            {loading ? 'Kaydediliyor...' : 'Bilgileri Güncelle'}
+          </Button>
         </div>
       )}
-
-      <div className="flex justify-end space-x-2">
-        <Button variant="outline" onClick={() => setIsEditing(false)}>
-          İptal
-        </Button>
-        <Button onClick={handleSave} disabled={updateMutation.isPending}>
-          {updateMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
-        </Button>
-      </div>
-    </div>
-  );
-
-  const DisplayContent = () => {
-    // For display purposes, don't show zero values
-    const displaySalary = salary !== '' && parseInt(salary, 10) > 0 ? parseInt(salary, 10) : null;
-    const displayCommission = commission !== '' && parseInt(commission, 10) > 0 ? parseInt(commission, 10) : null;
-    
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Çalışma Sistemi</p>
-            <div className="flex items-center mt-1">
-              <BriefcaseIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-              <p className="text-base capitalize">
-                {workSystem === 'komisyonlu' ? 'Komisyonlu' : `${paymentPeriod === 'aylik' ? 'Aylık' : paymentPeriod === 'haftalik' ? 'Haftalık' : 'Günlük'} Maaş`}
-              </p>
-            </div>
-          </div>
-          
-          {workSystem === 'maasli' && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Maaş</p>
-              <div className="flex items-center mt-1">
-                <Banknote className="h-4 w-4 mr-2 text-muted-foreground" />
-                {displaySalary !== null ? (
-                  <p className="text-base">{formatCurrency(displaySalary)}</p>
-                ) : (
-                  <p className="text-base text-muted-foreground">Belirtilmemiş</p>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {workSystem === 'komisyonlu' && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Prim Yüzdesi</p>
-              <div className="flex items-center mt-1">
-                <PercentIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-                {displayCommission !== null ? (
-                  <p className="text-base">%{displayCommission}</p>
-                ) : (
-                  <p className="text-base text-muted-foreground">Belirtilmemiş</p>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {canEdit && !isEditing && (
-          <div className="flex justify-end">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setIsEditing(true)}
-            >
-              Düzenle
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="p-6">
-          {isEditing ? <EditableContent /> : <DisplayContent />}
-        </CardContent>
-      </Card>
     </div>
   );
 }
