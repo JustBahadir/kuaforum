@@ -8,15 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { PersonnelForm } from "./PersonnelForm";
 import { usePersonnelMutation } from "../hooks/usePersonnelMutation";
-import { Personel } from "@/types/personnel";
-
-interface PersonnelDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-  personnel?: Personel | null;
-  isEditMode: boolean;
-}
+import { Personel, PersonnelDialogProps } from "@/types/personnel";
 
 export function PersonnelDialog({
   isOpen,

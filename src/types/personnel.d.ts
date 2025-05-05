@@ -18,8 +18,8 @@ export interface Personel {
 }
 
 export interface Personnel {
-  id: number;
-  dukkan_id: number;
+  id: string;
+  dukkan_id: string;
   eposta: string;
   telefon: string;
   adres: string;
@@ -77,6 +77,7 @@ export interface ServiceCategoryFormProps {
   onOpenChange?: (open: boolean) => void;
   onSuccess?: () => Promise<void>;
   onCancel?: () => void;
+  dukkanId?: string;
 }
 
 export interface CategoryFormProps {
@@ -131,4 +132,10 @@ export interface ServiceCategoriesListProps {
 
 export interface WorkingHoursProps {
   isletmeId: string;
+}
+
+export interface PersonnelListProps {
+  personel?: Personel[];
+  onEdit?: (personnel: Personel) => void;
+  isLoading?: boolean;
 }
