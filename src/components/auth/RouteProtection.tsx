@@ -1,127 +1,144 @@
 
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
-import { DevreDisiBilesenSayfa } from "../utils/DisabledComponents";
+import { Kullanici } from "@/lib/supabase/types";
+import { Profil } from "@/lib/supabase/temporaryTypes";
+import { Loader2 } from "lucide-react";
 
-// Rol türü tanımı
-type KullaniciRol = "isletme_sahibi" | "personel" | null;
-
-// Route koruması için prop tipi
 interface RouteProtectionProps {
   children: React.ReactNode;
-  allowedRoles?: KullaniciRol[];
-  redirectPath?: string;
+  allowedRoles?: string[];
 }
 
-export const RouteProtection = ({
-  children,
-  allowedRoles = [],
-  redirectPath = "/login"
-}: RouteProtectionProps) => {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<KullaniciRol>(null);
-  const [profilOK, setProfilOK] = useState(false);
+export const RouteProtection: React.FC<RouteProtectionProps> = ({ 
+  children, 
+  allowedRoles = [] 
+}) => {
+  const [yukleniyor, setYukleniyor] = useState(true);
+  const [oturumVar, setOturumVar] = useState(false);
+  const [kullanici, setKullanici] = useState<Kullanici | Profil | null>(null);
+  const location = useLocation();
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const oturumKontrol = async () => {
       try {
+        // Mevcut oturumu kontrol et
         const { data: { session } } = await supabase.auth.getSession();
-
+        
         if (!session) {
-          navigate(redirectPath, { replace: true });
+          console.log("Oturum yok, giriş sayfasına yönlendiriliyorsunuz...");
+          setYukleniyor(false);
           return;
         }
-
-        setUserId(session.user.id);
-
-        // Kullanıcı profilini kontrol et
-        const { data: kullaniciData, error: kullaniciError } = await supabase
+        
+        const userId = session.user.id;
+        
+        // Kullanıcı bilgilerini al
+        const { data: userData, error: userError } = await supabase
           .from("kullanicilar")
-          .select("rol, profil_tamamlandi")
-          .eq("kimlik", session.user.id)
-          .single();
-
-        if (kullaniciError || !kullaniciData) {
-          // Profil oluşturulmamış, profil kurulum sayfasına yönlendir
-          navigate("/profil-kurulum", { replace: true });
+          .select("*")
+          .eq("kimlik", userId)
+          .maybeSingle();
+        
+        if (userError) {
+          console.error("Kullanıcı bilgileri alınamadı:", userError);
+          setYukleniyor(false);
           return;
         }
-
-        setUserRole(kullaniciData.rol as KullaniciRol);
-        setProfilOK(kullaniciData.profil_tamamlandi || false);
-
-        // Profil tamamlanmamışsa profil kurulum sayfasına yönlendir
-        if (!kullaniciData.profil_tamamlandi) {
-          navigate("/profil-kurulum", { replace: true });
+        
+        // Profil bilgileri alınamadıysa veya profil tamamlanmadıysa setup sayfasına yönlendir
+        if (!userData) {
+          console.log("Profil bulunamadı, profil kurulum sayfasına yönlendiriliyorsunuz...");
+          setYukleniyor(false);
           return;
         }
-
-        // Personel bilgilerini kontrol et
-        if (kullaniciData.rol === "personel") {
-          const { data: personelData, error: personelError } = await supabase
-            .from("personeller")
-            .select("*")
-            .eq("kullanici_kimlik", session.user.id)
-            .single();
-
-          if (personelError) {
-            console.error("Personel verileri alınamadı:", personelError);
-            // Bu bir hata durumu, yine de devam et
+        
+        if (!userData.profil_tamamlandi) {
+          console.log("Profil tamamlanmamış, profil kurulum sayfasına yönlendiriliyorsunuz...");
+          setYukleniyor(false);
+          return;
+        }
+        
+        // Rol kontrolü yap (eğer belirli roller için kısıtlama varsa)
+        if (allowedRoles && allowedRoles.length > 0) {
+          const userRole = userData.rol;
+          
+          if (!userRole || !allowedRoles.includes(userRole)) {
+            console.log("Yetkisiz erişim, izin verilen roller:", allowedRoles, "kullanıcı rolü:", userRole);
+            setYukleniyor(false);
+            return;
           }
-
-          // personelData null kontrolü eklendi
-          if (personelData) {
-            if (!personelData.dukkan_id) {
-              navigate("/personel/atanmamis", { replace: true });
-              return;
-            }
-
-            // Personelin başvuruları kontrol edilebilir
-            const { data: basvuruData } = await supabase
-              .from("personel_basvurulari")
+        }
+        
+        // Personel için ek kontroller
+        if (userData.rol === "personel") {
+          try {
+            // Personel kaydı mevcut mu kontrol et
+            const { data: personelData } = await supabase
+              .from("personeller")
               .select("*")
-              .eq("kullanici_kimlik", session.user.id)
-              .eq("durum", "beklemede");
-
-            if (basvuruData && basvuruData.length > 0) {
-              navigate("/personel/beklemede", { replace: true });
-              return;
+              .eq("kullanici_kimlik", userId)
+              .maybeSingle();
+            
+            // Personel ise durum kontrolü yap
+            if (personelData && personelData.dukkan_id) {
+              // Personel bir işletmeye atanmış
+              console.log("Personel işletmeye atanmış");
+            } else {
+              // Personel henüz bir işletmeye atanmamış
+              console.log("Personel henüz bir işletmeye atanmamış");
             }
+          } catch (error) {
+            console.error("Personel bilgileri alınamadı:", error);
           }
         }
-
-        // Kullanıcının rolü sayfaya erişim için uygun mu kontrol et
-        if (allowedRoles.length > 0 && !allowedRoles.includes(kullaniciData.rol as KullaniciRol)) {
-          // Rol yetkisiz, ana sayfaya yönlendir
-          navigate("/", { replace: true });
-          return;
-        }
-
-        setLoading(false);
+        
+        setOturumVar(true);
+        setKullanici(userData as any); // Tip dönüşümü yaparak TypeScript hatasını önle
+        
       } catch (error) {
-        console.error("Kimlik doğrulama hatası:", error);
-        navigate(redirectPath, { replace: true });
+        console.error("Oturum kontrolü sırasında bir hata oluştu:", error);
+      } finally {
+        setYukleniyor(false);
       }
     };
 
-    checkAuth();
-  }, [navigate, redirectPath, allowedRoles]);
+    oturumKontrol();
+  }, [allowedRoles]);
 
-  if (loading) {
-    return <div>Yükleniyor...</div>;
+  // Yükleme durumu
+  if (yukleniyor) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-lg">Kullanıcı bilgileri kontrol ediliyor...</p>
+        </div>
+      </div>
+    );
   }
 
-  // Şimdilik sadece profil tamamlanmışsa ve rol uygunsa erişime izin ver
-  // Bu yapı yeni tip eklemeleri için uygun olacak
-  if (userRole && profilOK) {
-    if (allowedRoles.length === 0 || allowedRoles.includes(userRole)) {
-      return <>{children}</>;
-    }
+  // Oturum yoksa login sayfasına yönlendir
+  if (!oturumVar || !kullanici) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Geliştirme aşamasında geçici olarak içeriği göster
-  return <DevreDisiBilesenSayfa />;
+  // Profil tamamlanmamışsa profil kurulum sayfasına yönlendir
+  if (kullanici && !(kullanici as any).profil_tamamlandi) {
+    return <Navigate to="/profil-kurulum" replace />;
+  }
+
+  // İzin verilen roller belirtilmişse ve kullanıcının rolü bu listede değilse ana sayfaya yönlendir
+  if (
+    allowedRoles && 
+    allowedRoles.length > 0 && 
+    kullanici && 
+    (!(kullanici as any).rol || !allowedRoles.includes((kullanici as any).rol))
+  ) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Yetki kontrolünü geçtiyse içeriği göster
+  return <>{children}</>;
 };

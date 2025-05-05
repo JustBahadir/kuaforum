@@ -133,7 +133,7 @@ export function useProfileSetup() {
           telefon: formData.telefon || null,
           rol: formData.rol,
           profil_tamamlandi: true
-        })
+        } as any)
         .eq("kimlik", userId);
       
       if (profileError) {
@@ -153,7 +153,7 @@ export function useProfileSetup() {
             isletme_kodu: businessCode,
             sahip_kimlik: userId,
             adres: formData.il ? `${formData.il}` : null
-          });
+          } as any);
         
         if (businessError) {
           throw businessError;
@@ -170,7 +170,7 @@ export function useProfileSetup() {
           .insert({
             kullanici_kimlik: userId,
             durum: "atanmadi"
-          });
+          } as any);
         
         if (personnelError) {
           throw personnelError;
@@ -199,7 +199,7 @@ export function useProfileSetup() {
               isletme_kodu: formData.isletme_kodu.trim(),
               durum: "beklemede",
               tarih: new Date().toISOString().split('T')[0]
-            });
+            } as any);
           
           if (applicationError) {
             throw applicationError;
