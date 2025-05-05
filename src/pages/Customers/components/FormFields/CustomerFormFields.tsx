@@ -1,145 +1,127 @@
 
 import React from 'react';
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-range-picker-adapter";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { formatPhoneNumber } from '@/utils/phoneFormatter';
 
 interface CustomerFormFieldsProps {
-  formData: {
-    ad: string;
-    soyad: string;
-    telefon: string;
-    eposta: string;
-    dogum_tarihi?: Date | string | null;
-    cinsiyet: string;
-    notlar?: string;
-    adres?: string;
-  };
-  setFormData: React.Dispatch<React.SetStateAction<any>>;
-  errors: Record<string, string>;
+  formData: any;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handlePhoneChange: (value: string) => void;
+  handleDateChange: (field: string, date: Date | undefined) => void;
+  errors?: Record<string, string>;
 }
 
-export function CustomerFormFields({ formData, setFormData, errors }: CustomerFormFieldsProps) {
-  const handleDateChange = (date: Date | undefined) => {
-    setFormData((prev: any) => ({ ...prev, dogum_tarihi: date || null }));
-  };
-
-  const handlePhoneChange = (value: string) => {
-    setFormData((prev: any) => ({ ...prev, telefon: value }));
-  };
-
+export function CustomerFormFields({ 
+  formData, 
+  handleInputChange, 
+  handlePhoneChange,
+  handleDateChange,
+  errors = {}
+}: CustomerFormFieldsProps) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="ad">Ad <span className="text-red-500">*</span></Label>
-          <Input
-            id="ad"
-            value={formData.ad}
-            onChange={(e) => setFormData((prev: any) => ({ ...prev, ad: e.target.value }))}
-            placeholder="Müşteri adı"
-            error={errors.ad}
-          />
-          {errors.ad && <p className="text-xs text-red-500">{errors.ad}</p>}
+        {/* Ad */}
+        <div>
+          <Label htmlFor="ad" className="text-right">
+            Ad
+          </Label>
+          <div className="mt-1">
+            <Input
+              id="ad"
+              value={formData.ad || ''}
+              onChange={handleInputChange}
+              placeholder="Müşteri adı"
+              className={errors.ad ? "border-red-500" : ""}
+            />
+            {errors.ad && <p className="text-red-500 text-xs mt-1">{errors.ad}</p>}
+          </div>
         </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="soyad">Soyad <span className="text-red-500">*</span></Label>
-          <Input
-            id="soyad"
-            value={formData.soyad}
-            onChange={(e) => setFormData((prev: any) => ({ ...prev, soyad: e.target.value }))}
-            placeholder="Müşteri soyadı"
-            error={errors.soyad}
-          />
-          {errors.soyad && <p className="text-xs text-red-500">{errors.soyad}</p>}
+
+        {/* Soyad */}
+        <div>
+          <Label htmlFor="soyad" className="text-right">
+            Soyad
+          </Label>
+          <div className="mt-1">
+            <Input
+              id="soyad"
+              value={formData.soyad || ''}
+              onChange={handleInputChange}
+              placeholder="Müşteri soyadı"
+              className={errors.soyad ? "border-red-500" : ""}
+            />
+            {errors.soyad && <p className="text-red-500 text-xs mt-1">{errors.soyad}</p>}
+          </div>
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="telefon">Telefon <span className="text-red-500">*</span></Label>
+
+      {/* Telefon */}
+      <div>
+        <Label htmlFor="telefon" className="text-right">
+          Telefon
+        </Label>
+        <div className="mt-1">
           <PhoneInput
             id="telefon"
+            value={formData.telefon || ''}
             onChange={handlePhoneChange}
-            defaultValue={formData.telefon}
             placeholder="05XX XXX XX XX"
+            className={errors.telefon ? "border-red-500" : ""}
           />
-          {errors.telefon && <p className="text-xs text-red-500">{errors.telefon}</p>}
+          {errors.telefon && <p className="text-red-500 text-xs mt-1">{errors.telefon}</p>}
         </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="eposta">E-posta</Label>
+      </div>
+
+      {/* E-posta */}
+      <div>
+        <Label htmlFor="eposta" className="text-right">
+          E-posta
+        </Label>
+        <div className="mt-1">
           <Input
             id="eposta"
             type="email"
             value={formData.eposta || ''}
-            onChange={(e) => setFormData((prev: any) => ({ ...prev, eposta: e.target.value }))}
-            placeholder="örnek@email.com"
-            error={errors.eposta}
+            onChange={handleInputChange}
+            placeholder="ornek@email.com"
+            className={errors.eposta ? "border-red-500" : ""}
           />
-          {errors.eposta && <p className="text-xs text-red-500">{errors.eposta}</p>}
+          {errors.eposta && <p className="text-red-500 text-xs mt-1">{errors.eposta}</p>}
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="dogum-tarihi">Doğum Tarihi</Label>
+
+      {/* Doğum Tarihi */}
+      <div>
+        <Label htmlFor="dogum_tarihi" className="text-right">
+          Doğum Tarihi
+        </Label>
+        <div className="mt-1">
           <DatePicker
-            id="dogum-tarihi"
-            date={formData.dogum_tarihi ? new Date(formData.dogum_tarihi) : undefined}
-            onSelect={handleDateChange}
-            placeholder="Tarih seçin"
+            value={formData.dogum_tarihi ? new Date(formData.dogum_tarihi) : undefined}
+            onChange={(date) => handleDateChange('dogum_tarihi', date)}
+            placeholder="Doğum tarihi seçin"
+          />
+          {errors.dogum_tarihi && <p className="text-red-500 text-xs mt-1">{errors.dogum_tarihi}</p>}
+        </div>
+      </div>
+
+      {/* Adres */}
+      <div>
+        <Label htmlFor="adres" className="text-right">
+          Adres
+        </Label>
+        <div className="mt-1">
+          <Input
+            id="adres"
+            value={formData.adres || ''}
+            onChange={handleInputChange}
+            placeholder="Adres bilgisi"
           />
         </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="cinsiyet">Cinsiyet</Label>
-          <Select 
-            value={formData.cinsiyet || ''} 
-            onValueChange={(value) => setFormData((prev: any) => ({ ...prev, cinsiyet: value }))}
-          >
-            <SelectTrigger id="cinsiyet">
-              <SelectValue placeholder="Cinsiyet seçin" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="erkek">Erkek</SelectItem>
-              <SelectItem value="kadin">Kadın</SelectItem>
-              <SelectItem value="belirtilmedi">Belirtmek İstemiyorum</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="adres">Adres</Label>
-        <Textarea
-          id="adres"
-          value={formData.adres || ''}
-          onChange={(e) => setFormData((prev: any) => ({ ...prev, adres: e.target.value }))}
-          placeholder="Müşteri adresi"
-          rows={3}
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="notlar">Notlar</Label>
-        <Textarea
-          id="notlar"
-          value={formData.notlar || ''}
-          onChange={(e) => setFormData((prev: any) => ({ ...prev, notlar: e.target.value }))}
-          placeholder="Müşteri hakkında notlar"
-          rows={3}
-        />
       </div>
     </div>
   );

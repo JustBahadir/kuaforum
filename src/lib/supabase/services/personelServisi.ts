@@ -3,180 +3,77 @@ import { supabase } from '../client';
 import { Personel } from '../types';
 
 export const personelServisi = {
-  // İşletmeye göre personel listesi
-  async isletmeyeGoreGetir(isletmeKimlik: string): Promise<Personel[]> {
-    try {
-      const { data, error } = await supabase
-        .from('personel')
-        .select('*')
-        .eq('isletme_id', isletmeKimlik);
-        
-      if (error) throw error;
+  isletmeyeGoreGetir: async (isletmeKimlik: string): Promise<Personel[]> => {
+    const { data, error } = await supabase
+      .from('personeller')
+      .select('*')
+      .eq('isletme_id', isletmeKimlik);
       
-      return data as Personel[];
-    } catch (error) {
-      console.error('Personel listesi getirilirken hata:', error);
-      return [];
-    }
+    if (error) throw error;
+    return data || [];
   },
   
-  // Tüm personelleri getir
-  async hepsiniGetir(): Promise<Personel[]> {
-    try {
-      const { data, error } = await supabase
-        .from('personel')
-        .select('*');
-        
-      if (error) throw error;
+  hepsiniGetir: async (): Promise<Personel[]> => {
+    const { data, error } = await supabase
+      .from('personeller')
+      .select('*');
       
-      return data as Personel[];
-    } catch (error) {
-      console.error('Tüm personeller getirilirken hata:', error);
-      return [];
-    }
+    if (error) throw error;
+    return data || [];
   },
   
-  // Tek personel getir
-  async getir(personelKimlik: string): Promise<Personel | null> {
-    try {
-      const { data, error } = await supabase
-        .from('personel')
-        .select('*')
-        .eq('kimlik', personelKimlik)
-        .single();
-        
-      if (error) throw error;
+  getir: async (personelKimlik: string): Promise<Personel> => {
+    const { data, error } = await supabase
+      .from('personeller')
+      .select('*')
+      .eq('kimlik', personelKimlik)
+      .single();
       
-      return data as Personel;
-    } catch (error) {
-      console.error('Personel getirilirken hata:', error);
-      return null;
-    }
+    if (error) throw error;
+    return data;
   },
   
-  // Personel getir by ID (numeric ID)
-  async getirById(personelId: number | string): Promise<Personel | null> {
-    try {
-      const { data, error } = await supabase
-        .from('personel')
-        .select('*')
-        .eq('id', personelId)
-        .single();
-        
-      if (error) throw error;
+  olustur: async (personel: Partial<Personel>): Promise<Personel> => {
+    const { data, error } = await supabase
+      .from('personeller')
+      .insert([personel])
+      .select()
+      .single();
       
-      return data as Personel;
-    } catch (error) {
-      console.error('Personel ID ile getirilirken hata:', error);
-      return null;
-    }
+    if (error) throw error;
+    return data;
   },
   
-  // Kullanıcı kimliği ile personel getir
-  async kullaniciKimligiIleGetir(kullaniciKimlik: string): Promise<Personel | null> {
-    try {
-      const { data, error } = await supabase
-        .from('personel')
-        .select('*')
-        .eq('kullanici_kimlik', kullaniciKimlik)
-        .single();
-        
-      if (error) throw error;
+  guncelle: async (personelKimlik: string, personel: Partial<Personel>): Promise<Personel> => {
+    const { data, error } = await supabase
+      .from('personeller')
+      .update(personel)
+      .eq('kimlik', personelKimlik)
+      .select()
+      .single();
       
-      return data as Personel;
-    } catch (error) {
-      console.error('Kullanıcı kimliği ile personel getirilirken hata:', error);
-      return null;
-    }
+    if (error) throw error;
+    return data;
   },
   
-  // Personel bilgilerini güncelle veya yeni personel oluştur
-  async kaydet(personel: Partial<Personel>): Promise<Personel | null> {
-    try {
-      let veri;
-      let hata;
+  sil: async (personelKimlik: string): Promise<void> => {
+    const { error } = await supabase
+      .from('personeller')
+      .delete()
+      .eq('kimlik', personelKimlik);
       
-      if (personel.kimlik) {
-        // Güncelleme
-        const { data, error } = await supabase
-          .from('personel')
-          .update(personel)
-          .eq('kimlik', personel.kimlik)
-          .select()
-          .single();
-          
-        veri = data;
-        hata = error;
-      } else {
-        // Yeni personel
-        const { data, error } = await supabase
-          .from('personel')
-          .insert([personel])
-          .select()
-          .single();
-          
-        veri = data;
-        hata = error;
-      }
-      
-      if (hata) throw hata;
-      
-      return veri as Personel;
-    } catch (error) {
-      console.error('Personel kaydedilirken hata:', error);
-      return null;
-    }
+    if (error) throw error;
   },
   
-  // Personel ekle
-  async ekle(personel: Partial<Personel>): Promise<Personel | null> {
-    try {
-      const { data, error } = await supabase
-        .from('personel')
-        .insert([personel])
-        .select()
-        .single();
-        
-      if (error) throw error;
+  register: async (personelData: any): Promise<Personel> => {
+    // Implementation for registering a new personnel
+    const { data, error } = await supabase
+      .from('personeller')
+      .insert([personelData])
+      .select()
+      .single();
       
-      return data as Personel;
-    } catch (error) {
-      console.error('Personel eklenirken hata:', error);
-      return null;
-    }
-  },
-  
-  // Personel sil
-  async sil(personelKimlik: string | number): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('personel')
-        .delete()
-        .eq(typeof personelKimlik === 'string' ? 'kimlik' : 'id', personelKimlik);
-        
-      if (error) throw error;
-      
-      return true;
-    } catch (error) {
-      console.error('Personel silinirken hata:', error);
-      return false;
-    }
-  },
-  
-  // Register personel (compatibility with older code)
-  async register(personelData: any): Promise<any> {
-    try {
-      const { data, error } = await supabase
-        .from('personel')
-        .insert([personelData])
-        .select();
-        
-      if (error) throw error;
-      
-      return data;
-    } catch (error) {
-      console.error('Personel kaydı yapılırken hata:', error);
-      throw error;
-    }
+    if (error) throw error;
+    return data;
   }
 };

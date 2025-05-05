@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -81,7 +80,7 @@ export function PersonnelDetailsDialog({
             </TabsContent>
 
             <TabsContent value="work-info" className="mt-4">
-              <WorkInfoTab personnel={personnel} onEdit={onRefresh} />
+              <WorkInfoTab personel={personnel} onEdit={handleTabDataChange} />
             </TabsContent>
 
             <TabsContent value="operations-history" className="mt-4">

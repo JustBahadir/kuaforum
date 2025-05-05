@@ -32,7 +32,7 @@ export function ServiceCategoryForm({ isletmeId, onSuccess, onCancel }: ServiceC
     setLoading(true);
     
     try {
-      await kategoriServisi.ekle({
+      await kategoriServisi.olustur({
         kategori_adi: kategoriAdi,
         isletme_id: isletmeId,
         baslik: kategoriAdi

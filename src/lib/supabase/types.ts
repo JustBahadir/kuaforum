@@ -1,4 +1,3 @@
-
 // Enum definitions
 export type KullaniciRol = "isletme_sahibi" | "personel" | "musteri";
 export type PersonelDurum = "aktif" | "izinli" | "cikti";
@@ -70,6 +69,7 @@ export interface Personel extends BaseEntity {
   ise_baslama_tarihi?: string;
   personel_no?: string;
   calisma_sistemi?: string;
+  iban?: string;
 }
 
 export interface IslemKategorisi extends BaseEntity {
@@ -140,7 +140,7 @@ export interface Randevu extends BaseEntity {
   saat: string;
   bitis_saat?: string;
   durum: RandevuDurum;
-  notlar?: string;
+  aciklama?: string;
   islemler: any[];
   toplam_tutar?: number;
   customer_id?: string;
@@ -203,6 +203,6 @@ export interface PersonelIslemi extends BaseEntity {
   odenen: number;
   prim_yuzdesi: number;
   puan?: number;
-  aciklama?: string;
+  aciklama?: string;  // Replaces notlar
   tarih?: string;
 }

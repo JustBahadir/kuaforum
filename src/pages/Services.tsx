@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, PlusCircle } from "lucide-react";
 
 export default function Services() {
-  const { user, userRole } = useAuth();
+  const { user } = useAuth();
+  const userRole = user?.user_metadata?.role || 'customer';
   const { isletme, loading } = useShopData();
   const [activeTab, setActiveTab] = useState("hizmetler");
   const [kategoriler, setKategoriler] = useState<IslemKategorisi[]>([]);

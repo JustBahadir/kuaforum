@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -77,7 +76,7 @@ export default function ProfileSetupPage() {
           console.error("Profile check error:", error);
           return;
         }
-          
+        
         if (kullanici?.profil_tamamlandi) {
           // User has already completed profile, redirect based on role
           if (kullanici.rol === "isletme_sahibi") {
@@ -87,13 +86,16 @@ export default function ProfileSetupPage() {
           }
         } else if (kullanici) {
           // Pre-fill form data if available
-          setFormData(prev => ({
-            ...prev,
+          setFormData({
             ad: kullanici.ad || "",
             soyad: kullanici.soyad || "",
             telefon: kullanici.telefon || "",
-            rol: kullanici.rol as KullaniciRol || ""
-          }));
+            cinsiyet: "",
+            rol: kullanici.rol as KullaniciRol || "musteri" as KullaniciRol,
+            isletme_adi: "",
+            il: "",
+            isletme_kodu: ""
+          });
         }
       } catch (error) {
         console.error("Auth check error:", error);

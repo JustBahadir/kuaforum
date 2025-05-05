@@ -3,209 +3,202 @@ import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-range-picker-adapter";
-import { toast } from 'sonner';
 import { personelServisi } from '@/lib/supabase';
-import { Personel } from '@/lib/supabase/types';
+import { toast } from 'sonner';
 
 interface WorkInfoTabProps {
-  personel: Personel;
-  onUpdate?: () => void;
-  readOnly?: boolean;
+  personel: any;
+  onEdit: () => void;
 }
 
-export function WorkInfoTab({ personel, onUpdate, readOnly = false }: WorkInfoTabProps) {
+export function WorkInfoTab({ personel, onEdit }: WorkInfoTabProps) {
+  const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
-    unvan: personel.unvan || '',
-    gorev: personel.gorev || '',
-    calisma_sistemi: personel.calisma_sistemi || '',
-    maas: personel.maas || 0,
-    prim_yuzdesi: personel.prim_yuzdesi || 0,
-    ise_baslama_tarihi: personel.ise_baslama_tarihi ? new Date(personel.ise_baslama_tarihi) : null,
-    personel_no: personel.personel_no || '',
-    izin_baslangic: personel.izin_baslangic ? new Date(personel.izin_baslangic) : null,
-    izin_bitis: personel.izin_bitis ? new Date(personel.izin_bitis) : null,
-    iban: personel.iban || '',
+    ise_baslama_tarihi: personel?.ise_baslama_tarihi || '',
+    unvan: personel?.unvan || '',
+    gorev: personel?.gorev || '',
+    maas: personel?.maas || 0,
+    prim_yuzdesi: personel?.prim_yuzdesi || 0,
+    personel_no: personel?.personel_no || '',
+    iban: personel?.iban || '',
   });
 
-  const [loading, setLoading] = useState(false);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-  const handleUpdate = async () => {
-    if (readOnly) return;
-    
-    setLoading(true);
+  const handleDateChange = (date: Date | undefined) => {
+    if (date) {
+      setFormData((prev) => ({ ...prev, ise_baslama_tarihi: date.toISOString().split('T')[0] }));
+    } else {
+      setFormData((prev) => ({ ...prev, ise_baslama_tarihi: '' }));
+    }
+  };
+
+  const handleSubmit = async () => {
     try {
-      await personelServisi.guncelle(personel.id.toString(), {
-        unvan: formData.unvan || null,
-        gorev: formData.gorev || null,
-        calisma_sistemi: formData.calisma_sistemi || null,
-        maas: formData.maas || 0,
-        prim_yuzdesi: formData.prim_yuzdesi || 0,
-        ise_baslama_tarihi: formData.ise_baslama_tarihi ? formData.ise_baslama_tarihi.toISOString() : null,
-        personel_no: formData.personel_no || null,
-        izin_baslangic: formData.izin_baslangic ? formData.izin_baslangic.toISOString() : null,
-        izin_bitis: formData.izin_bitis ? formData.izin_bitis.toISOString() : null,
-        iban: formData.iban || null,
-      });
-      
-      toast.success("Personel bilgileri güncellendi");
-      if (onUpdate) onUpdate();
+      if (personel?.id) {
+        await personelServisi.guncelle(personel.id.toString(), {
+          ise_baslama_tarihi: formData.ise_baslama_tarihi,
+          unvan: formData.unvan,
+          gorev: formData.gorev,
+          maas: Number(formData.maas),
+          prim_yuzdesi: Number(formData.prim_yuzdesi),
+          personel_no: formData.personel_no,
+          iban: formData.iban,
+        });
+        
+        toast.success('Personel bilgileri güncellendi');
+        setEditing(false);
+        if (onEdit) onEdit();
+      }
     } catch (error) {
-      console.error("Personel güncellenirken hata:", error);
-      toast.error("Personel güncellenirken bir hata oluştu");
-    } finally {
-      setLoading(false);
+      console.error('Personel güncelleme hatası:', error);
+      toast.error('Personel bilgileri güncellenirken bir hata oluştu');
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">Çalışma Bilgileri</h3>
+        <Button
+          variant="ghost"
+          onClick={() => setEditing(!editing)}
+        >
+          {editing ? 'İptal' : 'Düzenle'}
+        </Button>
+      </div>
+
+      <div className="space-y-4">
+        {/* İşe Başlama Tarihi */}
+        <div>
+          <Label>İşe Başlama Tarihi</Label>
+          {editing ? (
+            <DatePicker
+              value={formData.ise_baslama_tarihi ? new Date(formData.ise_baslama_tarihi) : undefined}
+              onChange={handleDateChange}
+              placeholder="İşe başlama tarihi seçin"
+            />
+          ) : (
+            <p className="mt-1">{formData.ise_baslama_tarihi || 'Belirtilmemiş'}</p>
+          )}
+        </div>
+
+        {/* Ünvan */}
+        <div>
           <Label htmlFor="unvan">Ünvan</Label>
-          <Input
-            id="unvan"
-            value={formData.unvan}
-            onChange={(e) => setFormData({ ...formData, unvan: e.target.value })}
-            placeholder="Örn: Kuaför, Asistan"
-            disabled={readOnly}
-          />
+          {editing ? (
+            <Input
+              id="unvan"
+              name="unvan"
+              value={formData.unvan}
+              onChange={handleInputChange}
+              placeholder="Örn: Kuaför"
+              className="mt-1"
+            />
+          ) : (
+            <p className="mt-1">{formData.unvan || 'Belirtilmemiş'}</p>
+          )}
         </div>
-        
-        <div className="space-y-2">
+
+        {/* Görev */}
+        <div>
           <Label htmlFor="gorev">Görev</Label>
-          <Input
-            id="gorev"
-            value={formData.gorev}
-            onChange={(e) => setFormData({ ...formData, gorev: e.target.value })}
-            placeholder="Örn: Saç Kesimi, Renklendirme"
-            disabled={readOnly}
-          />
+          {editing ? (
+            <Input
+              id="gorev"
+              name="gorev"
+              value={formData.gorev}
+              onChange={handleInputChange}
+              placeholder="Örn: Saç Kesimi, Boyama"
+              className="mt-1"
+            />
+          ) : (
+            <p className="mt-1">{formData.gorev || 'Belirtilmemiş'}</p>
+          )}
         </div>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="calisma-sistemi">Çalışma Sistemi</Label>
-          <Select
-            value={formData.calisma_sistemi}
-            onValueChange={(value) => setFormData({ ...formData, calisma_sistemi: value })}
-            disabled={readOnly}
-          >
-            <SelectTrigger id="calisma-sistemi">
-              <SelectValue placeholder="Seçiniz" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="tam-zamanli">Tam Zamanlı</SelectItem>
-              <SelectItem value="yarim-zamanli">Yarım Zamanlı</SelectItem>
-              <SelectItem value="freelance">Freelance</SelectItem>
-              <SelectItem value="stajyer">Stajyer</SelectItem>
-            </SelectContent>
-          </Select>
+
+        {/* Maaş */}
+        <div>
+          <Label htmlFor="maas">Maaş</Label>
+          {editing ? (
+            <Input
+              id="maas"
+              name="maas"
+              type="number"
+              value={formData.maas}
+              onChange={handleInputChange}
+              placeholder="Maaş miktarı"
+              className="mt-1"
+            />
+          ) : (
+            <p className="mt-1">{formData.maas ? `${formData.maas} ₺` : 'Belirtilmemiş'}</p>
+          )}
         </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="ise-baslama-tarihi">İşe Başlama Tarihi</Label>
-          <DatePicker
-            id="ise-baslama-tarihi"
-            date={formData.ise_baslama_tarihi || undefined}
-            onSelect={(date) => setFormData({ ...formData, ise_baslama_tarihi: date || null })}
-            disabled={readOnly}
-          />
+
+        {/* Prim Yüzdesi */}
+        <div>
+          <Label htmlFor="prim_yuzdesi">Prim Yüzdesi (%)</Label>
+          {editing ? (
+            <Input
+              id="prim_yuzdesi"
+              name="prim_yuzdesi"
+              type="number"
+              value={formData.prim_yuzdesi}
+              onChange={handleInputChange}
+              placeholder="Örn: 5"
+              className="mt-1"
+            />
+          ) : (
+            <p className="mt-1">%{formData.prim_yuzdesi || '0'}</p>
+          )}
         </div>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="maas">Maaş (₺)</Label>
-          <Input
-            id="maas"
-            type="number"
-            value={formData.maas || ''}
-            onChange={(e) => setFormData({ ...formData, maas: parseFloat(e.target.value) || 0 })}
-            placeholder="0.00"
-            disabled={readOnly}
-          />
+
+        {/* Personel No */}
+        <div>
+          <Label htmlFor="personel_no">Personel No</Label>
+          {editing ? (
+            <Input
+              id="personel_no"
+              name="personel_no"
+              value={formData.personel_no}
+              onChange={handleInputChange}
+              placeholder="Personel numarası"
+              className="mt-1"
+            />
+          ) : (
+            <p className="mt-1">{formData.personel_no || 'Belirtilmemiş'}</p>
+          )}
         </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="prim-yuzdesi">Prim Yüzdesi (%)</Label>
-          <Input
-            id="prim-yuzdesi"
-            type="number"
-            value={formData.prim_yuzdesi || ''}
-            onChange={(e) => setFormData({ ...formData, prim_yuzdesi: parseFloat(e.target.value) || 0 })}
-            placeholder="0"
-            disabled={readOnly}
-            min={0}
-            max={100}
-          />
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="personel-no">Personel No</Label>
-          <Input
-            id="personel-no"
-            value={formData.personel_no}
-            onChange={(e) => setFormData({ ...formData, personel_no: e.target.value })}
-            placeholder="Personel numarası"
-            disabled={readOnly}
-          />
-        </div>
-        
-        <div className="space-y-2">
+
+        {/* IBAN */}
+        <div>
           <Label htmlFor="iban">IBAN</Label>
-          <Input
-            id="iban"
-            value={formData.iban}
-            onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
-            placeholder="TR00 0000 0000 0000 0000 0000 00"
-            disabled={readOnly}
-          />
-        </div>
-      </div>
-      
-      <div className="border-t pt-4 mt-4">
-        <h3 className="font-medium mb-4">İzin Bilgileri</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="izin-baslangic">İzin Başlangıç</Label>
-            <DatePicker
-              id="izin-baslangic"
-              date={formData.izin_baslangic || undefined}
-              onSelect={(date) => setFormData({ ...formData, izin_baslangic: date || null })}
-              disabled={readOnly}
+          {editing ? (
+            <Input
+              id="iban"
+              name="iban"
+              value={formData.iban}
+              onChange={handleInputChange}
+              placeholder="TR..."
+              className="mt-1"
             />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="izin-bitis">İzin Bitiş</Label>
-            <DatePicker
-              id="izin-bitis"
-              date={formData.izin_bitis || undefined}
-              onSelect={(date) => setFormData({ ...formData, izin_bitis: date || null })}
-              disabled={readOnly}
-            />
-          </div>
+          ) : (
+            <p className="mt-1">{formData.iban || 'Belirtilmemiş'}</p>
+          )}
         </div>
+
+        {editing && (
+          <div className="flex justify-end">
+            <Button onClick={handleSubmit}>
+              Kaydet
+            </Button>
+          </div>
+        )}
       </div>
-      
-      {!readOnly && (
-        <div className="flex justify-end mt-6">
-          <Button onClick={handleUpdate} disabled={loading}>
-            {loading ? 'Kaydediliyor...' : 'Bilgileri Güncelle'}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

@@ -35,12 +35,14 @@ export function ServiceCategoriesList({
       {kategoriler.length > 0 ? (
         <div className="space-y-2">
           {kategoriler.map((kategori) => {
+            const itemId = kategori.id?.toString() || kategori.kimlik?.toString() || '';
             const isSelected = (selectedCategory === kategori.id) || 
-                              (selectedCategory === kategori.kimlik);
+                              (selectedCategory === kategori.kimlik) ||
+                              (selectedCategory?.toString() === itemId);
             
             return (
               <div 
-                key={kategori.id || kategori.kimlik} 
+                key={itemId}
                 className={`p-3 border rounded-md flex justify-between items-center ${
                   isSelected ? 'bg-blue-50 border-blue-300' : 'border-gray-200 hover:bg-gray-50'
                 } cursor-pointer transition-colors`}
