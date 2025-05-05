@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AccountNotFound from "@/components/auth/AccountNotFound";
+import { profilServisi } from "@/lib/supabase/services/profilServisi";
 
 export default function AuthGoogleCallback() {
   const [loading, setLoading] = useState(true);
@@ -45,18 +46,7 @@ export default function AuthGoogleCallback() {
 
         console.log("Auth callback - User:", user.email);
 
-        // First check for profiles table (current structure)
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (profileError && profileError.code !== 'PGRST116') {
-          console.error("Error fetching user profile from profiles:", profileError);
-        }
-
-        // Then check for kullanicilar table (new structure)
+        // Check for user profile in kullanicilar table (newer structure)
         const { data: kullanici, error: kullaniciError } = await supabase
           .from("kullanicilar")
           .select("*")
@@ -67,8 +57,8 @@ export default function AuthGoogleCallback() {
           console.error("Error fetching user from kullanicilar:", kullaniciError);
         }
         
-        // If user doesn't exist in either table and came from registration flow
-        if (!profile && !kullanici) {
+        // If user doesn't exist and came from registration flow
+        if (!kullanici) {
           console.log("No profile found, mode:", mode);
           
           if (mode === "register") {
@@ -83,31 +73,7 @@ export default function AuthGoogleCallback() {
           }
         }
         
-        // If account exists in profiles (older structure)
-        if (profile) {
-          console.log("Found profile in profiles table:", profile);
-          
-          // Check if profile is completed
-          if (profile.profil_tamamlandi === false || !profile.first_name) {
-            console.log("Profile exists but not completed, redirecting to setup");
-            navigate("/profil-kurulum", { replace: true });
-            return;
-          }
-          
-          // If completed, redirect based on role
-          const role = profile.role || 'customer';
-          
-          if (role === "isletme_sahibi" || role === "admin") {
-            navigate("/isletme/anasayfa", { replace: true });
-          } else if (role === "personel" || role === "staff") {
-            navigate("/personel/anasayfa", { replace: true });
-          } else {
-            navigate("/musteri/anasayfa", { replace: true });
-          }
-          return;
-        }
-        
-        // If account exists in kullanicilar (newer structure)
+        // If user exists in kullanicilar (newer structure)
         if (kullanici) {
           console.log("Found user in kullanicilar table:", kullanici);
           
@@ -132,7 +98,6 @@ export default function AuthGoogleCallback() {
         // This should not happen if all checks above are exhaustive
         setError("Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.");
         setLoading(false);
-
       } catch (error: any) {
         console.error("Auth callback error:", error);
         setError("İşlem sırasında bir hata oluştu");
