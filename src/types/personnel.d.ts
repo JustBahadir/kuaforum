@@ -96,4 +96,3 @@ export interface ShopWorkingHoursCardProps {
   userRole?: string;
   dukkanId?: number | string;
 }
-
