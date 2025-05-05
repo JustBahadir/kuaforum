@@ -20,6 +20,8 @@ export function GoogleAuthButton({
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
+      console.log("Redirecting to:", redirectTo);
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

@@ -1,81 +1,112 @@
 
-import React, { useState } from 'react';
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { kategoriServisi } from '@/lib/supabase';
-import { toast } from 'sonner';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/use-toast";
+import { kategoriServisi } from "@/lib/supabase";
 
 interface ServiceCategoryFormProps {
-  isletmeId?: string;
-  onSuccess?: () => void;
-  onCancel?: () => void;
+  dukkanId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
 }
 
-export function ServiceCategoryForm({ isletmeId, onSuccess, onCancel }: ServiceCategoryFormProps) {
-  const [kategoriAdi, setKategoriAdi] = useState('');
-  const [loading, setLoading] = useState(false);
+export function ServiceCategoryForm({ 
+  dukkanId, 
+  open, 
+  onOpenChange, 
+  onSuccess 
+}: ServiceCategoryFormProps) {
+  const [kategoriAdi, setKategoriAdi] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!kategoriAdi.trim()) {
-      toast.error('Kategori adı boş olamaz');
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Kategori adı boş olamaz"
+      });
       return;
     }
     
-    if (!isletmeId) {
-      toast.error('İşletme ID gereklidir');
-      return;
-    }
-    
-    setLoading(true);
-    
+    setIsLoading(true);
     try {
-      await kategoriServisi.olustur({
+      // Updated to use 'ekle' instead of 'olustur'
+      await kategoriServisi.ekle({
+        dukkan_id: dukkanId,
         kategori_adi: kategoriAdi,
-        isletme_id: isletmeId,
-        baslik: kategoriAdi
+        sira: 999 // Will be reordered by the backend
       });
       
-      toast.success('Kategori başarıyla eklendi');
-      setKategoriAdi('');
+      toast({
+        title: "Başarılı",
+        description: "Kategori başarıyla eklendi"
+      });
       
-      if (onSuccess) {
-        onSuccess();
-      }
+      setKategoriAdi("");
+      onSuccess();
+      onOpenChange(false);
     } catch (error) {
-      console.error('Kategori eklenirken hata:', error);
-      toast.error('Kategori eklenirken bir hata oluştu');
+      console.error("Kategori ekleme hatası:", error);
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Kategori eklenirken bir sorun oluştu"
+      });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
   
   return (
-    <div className="p-4 border border-gray-200 rounded-md">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="kategori_adi">Kategori Adı</Label>
-          <Input 
-            id="kategori_adi" 
-            value={kategoriAdi}
-            onChange={(e) => setKategoriAdi(e.target.value)}
-            placeholder="Kategori adını giriniz"
-          />
-        </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Yeni Kategori Ekle</DialogTitle>
+          <DialogDescription>
+            Hizmetlerinizi organize edecek yeni bir kategori ekleyin.
+          </DialogDescription>
+        </DialogHeader>
         
-        <div className="flex justify-end space-x-2">
-          {onCancel && (
-            <Button type="button" variant="outline" onClick={onCancel}>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="kategori-adi">Kategori Adı</Label>
+            <Input
+              id="kategori-adi"
+              placeholder="Örn: Saç Kesimi, Manikür"
+              value={kategoriAdi}
+              onChange={(e) => setKategoriAdi(e.target.value)}
+              required
+            />
+          </div>
+          
+          <div className="flex justify-end space-x-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isLoading}
+            >
               İptal
             </Button>
-          )}
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Ekleniyor...' : 'Kategori Ekle'}
-          </Button>
-        </div>
-      </form>
-    </div>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Ekleniyor..." : "Ekle"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

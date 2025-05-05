@@ -1,274 +1,194 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase, supabaseAdmin } from "@/lib/supabase/client";
-import { Personel } from "@/lib/supabase";
-import { toast } from "@/components/ui/use-toast";
-import { profilServisi } from "@/lib/supabase/services/profilServisi";
-import { User } from "@supabase/supabase-js";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
-// Type definitions for clarity
-type PersonelData = Omit<Personel, 'id' | 'created_at'>;
-type ProfileData = {
-  first_name: string;
-  last_name: string;
-  role: string;
-  phone: string;
-};
+import { useState } from "react";
+import { supabase } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { Personel } from "@/types/personnel";
 
-/**
- * Creates a personnel record in the database
- */
-async function createPersonelRecord(personelData: PersonelData): Promise<Personel> {
-  console.log("Creating personnel record with data:", personelData);
-  
-  const { data, error } = await supabase
-    .from('personel')
-    .insert([personelData])
-    .select()
-    .single();
+export function usePersonnelMutation() {
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  if (error) {
-    console.error("Personnel insert error:", error);
-    throw error;
-  }
-
-  console.log("Personnel record created:", data);
-  return data;
-}
-
-/**
- * Updates an existing user's metadata and profile
- */
-async function updateExistingUser(userId: string, personelData: PersonelData): Promise<void> {
-  try {
-    console.log("Updating existing user:", userId);
-    
-    // Split name for metadata
-    const nameParts = personelData.ad_soyad.split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
-    
+  // Create new personnel
+  const createPersonnel = async (personnelData: Omit<Personel, "id" | "created_at">): Promise<Personel | null> => {
     try {
-      // Update user metadata - using admin client
-      const { error: metadataError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-        user_metadata: { 
-          role: 'staff',
-          first_name: firstName,
-          last_name: lastName
-        }
-      });
+      setLoading(true);
       
-      if (metadataError) {
-        console.error("Error updating user metadata:", metadataError);
-      } else {
-        console.log("Updated user metadata successfully");
+      const { data, error } = await supabase
+        .from("personel")
+        .insert([personnelData])
+        .select();
+      
+      if (error) {
+        console.error("Personnel creation error:", error);
+        toast.error("Personel eklenirken bir hata oluştu");
+        return null;
       }
-    } catch (metadataError) {
-      console.error("Failed to update user metadata:", metadataError);
+
+      toast.success("Personel başarıyla eklendi");
+      return data[0] as Personel;
+    } catch (error) {
+      console.error("Personnel creation error:", error);
+      toast.error("Personel eklenirken bir hata oluştu");
+      return null;
+    } finally {
+      setLoading(false);
     }
-    
-    // Update profile using service_role key via profile service
+  };
+
+  // Update personnel
+  const updatePersonnel = async (id: string, personnelData: Partial<Personel>): Promise<Personel | null> => {
     try {
-      await profilServisi.createProfile(userId, {
-        first_name: firstName,
-        last_name: lastName,
-        role: 'staff',
-        phone: personelData.telefon
-      });
-      console.log("Updated existing user profile");
-    } catch (profileError) {
-      console.error("Error updating profile:", profileError);
-    }
-  } catch (error) {
-    console.error("Error updating profile for existing auth user:", error);
-  }
-}
-
-/**
- * Tries to find an existing user with the given email
- */
-async function findExistingUser(email: string): Promise<User | null> {
-  try {
-    console.log("Searching for existing user with email:", email);
-    
-    // Use admin api with service_role key to list users
-    const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-    
-    if (listError || !usersData?.users) {
-      console.error("Error listing users:", listError);
-      return null;
-    }
-    
-    // Type assertion to ensure proper type checking
-    const users = usersData.users as User[];
-    
-    // Find user with matching email using explicit type checking
-    const matchingUser = users.find(user => {
-      if (!user) return false;
+      setLoading(true);
       
-      // Since we've asserted the type above, User should have email property
-      return typeof user.email === 'string' && 
-             user.email.toLowerCase() === email.toLowerCase();
-    });
-    
-    if (matchingUser) {
-      console.log("Found user via admin API:", matchingUser.id);
-    } else {
-      console.log("No existing user found with this email");
-    }
-    
-    return matchingUser || null;
-  } catch (error) {
-    console.error("Error finding existing user:", error);
-    return null;
-  }
-}
-
-/**
- * Updates a personnel record with the given auth_id
- */
-async function updatePersonelWithAuthId(personelId: number, authId: string): Promise<void> {
-  try {
-    await supabase
-      .from('personel')
-      .update({ auth_id: authId })
-      .eq('id', personelId);
-    
-    console.log("Updated personnel record with auth_id:", authId);
-  } catch (error) {
-    console.error("Error updating personnel with auth_id:", error);
-  }
-}
-
-/**
- * Creates a new auth user for the personnel
- */
-async function createAuthUser(email: string, nameData: { firstName: string; lastName: string }, dukkanId: number | null): Promise<User | null> {
-  try {
-    console.log("Creating new auth user with email:", email);
-    
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
-      password: "password123",
-      email_confirm: true,
-      user_metadata: {
-        first_name: nameData.firstName,
-        last_name: nameData.lastName,
-        role: 'staff',
-        dukkan_id: dukkanId
+      const { data, error } = await supabase
+        .from("personel")
+        .update(personnelData)
+        .eq("id", id)
+        .select();
+      
+      if (error) {
+        console.error("Personnel update error:", error);
+        toast.error("Personel güncellenirken bir hata oluştu");
+        return null;
       }
-    });
 
-    if (authError) {
-      console.error("Auth user creation error:", authError);
+      toast.success("Personel başarıyla güncellendi");
+      return data[0] as Personel;
+    } catch (error) {
+      console.error("Personnel update error:", error);
+      toast.error("Personel güncellenirken bir hata oluştu");
       return null;
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (authData && authData.user) {
-      console.log("New auth user created:", authData.user.id);
-      return authData.user;
+  // Delete personnel
+  const deletePersonnel = async (id: string): Promise<boolean> => {
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from("personel")
+        .delete()
+        .eq("id", id);
+      
+      if (error) {
+        console.error("Personnel deletion error:", error);
+        toast.error("Personel silinirken bir hata oluştu");
+        return false;
+      }
+
+      toast.success("Personel başarıyla silindi");
+      return true;
+    } catch (error) {
+      console.error("Personnel deletion error:", error);
+      toast.error("Personel silinirken bir hata oluştu");
+      return false;
+    } finally {
+      setLoading(false);
     }
-    
-    return null;
-  } catch (error) {
-    console.error("Error creating auth user:", error);
-    return null;
-  }
-}
+  };
 
-/**
- * Connects a personnel record to an auth user and creates a profile
- */
-async function connectPersonelToAuthUser(personelData: PersonelData, personelId: number): Promise<void> {
-  try {
-    const nameParts = personelData.ad_soyad.split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
-    
-    // Find or create the auth user
-    const existingUser = await findExistingUser(personelData.eposta);
-    
-    if (existingUser) {
-      // Update the existing user
-      await updateExistingUser(existingUser.id, personelData);
+  // Accept staff join request
+  const acceptStaffJoinRequest = async (requestId: string): Promise<boolean> => {
+    try {
+      setLoading(true);
       
-      // Update personnel record with auth_id
-      await updatePersonelWithAuthId(personelId, existingUser.id);
+      // First get the request details
+      const { data: requestData, error: requestError } = await supabase
+        .from("personel_katilim_istekleri")
+        .select("*")
+        .eq("id", requestId)
+        .single();
       
-      return;
-    }
-    
-    // Create new auth user
-    const newUser = await createAuthUser(personelData.eposta, { firstName, lastName }, personelData.dukkan_id || null);
-    
-    if (newUser) {
-      // Update personnel record with auth_id
-      await updatePersonelWithAuthId(personelId, newUser.id);
-        
-      // Create profile
-      await profilServisi.createProfile(newUser.id, {
-        first_name: firstName,
-        last_name: lastName,
-        role: 'staff',
-        phone: personelData.telefon
-      });
-    }
-  } catch (error) {
-    console.error("Error connecting personnel to auth user:", error);
-    toast({
-      title: "Hata",
-      description: "Personel kaydedildi ancak giriş bilgileri oluşturulamadı"
-    });
-  }
-}
-
-export function usePersonnelMutation(onSuccess?: () => void) {
-  const queryClient = useQueryClient();
-  const { dukkanId } = useCustomerAuth();
-
-  return useMutation({
-    mutationFn: async (personelData: PersonelData) => {
-      console.log("Personnel mutation started with data:", personelData);
-      
-      // Ensure personnel is associated with the current shop
-      const dataWithShop = {
-        ...personelData,
-        dukkan_id: dukkanId || personelData.dukkan_id
-      };
-      
-      if (!dataWithShop.dukkan_id) {
-        throw new Error("Personel kaydı için dükkan ID gereklidir.");
+      if (requestError) {
+        console.error("Error fetching join request:", requestError);
+        toast.error("Katılım isteği bilgileri alınamadı");
+        return false;
       }
       
       // Create personnel record
-      const personelRecord = await createPersonelRecord(dataWithShop);
-
-      // If auth_id is already specified, just update that user's info
-      if (personelData.auth_id) {
-        await updateExistingUser(personelData.auth_id, dataWithShop);
-        return personelRecord;
+      const personnelData = {
+        dukkan_id: requestData.dukkan_id,
+        ad_soyad: requestData.ad_soyad,
+        eposta: requestData.eposta,
+        telefon: requestData.telefon || "",
+        personel_no: `P${new Date().getTime().toString().slice(-6)}`,
+        maas: 0,
+        prim_yuzdesi: 0,
+        calisma_sistemi: "tam_zamanli",
+        adres: "",
+        kullanici_kimlik: requestData.kullanici_kimlik
+      };
+      
+      const { error: personnelError } = await supabase
+        .from("personel")
+        .insert([personnelData]);
+      
+      if (personnelError) {
+        console.error("Error creating personnel record:", personnelError);
+        toast.error("Personel kaydı oluşturulamadı");
+        return false;
       }
-
-      // Connect to auth user (find existing or create new)
-      await connectPersonelToAuthUser(dataWithShop, personelRecord.id);
-
-      return personelRecord;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Başarılı",
-        description: "Personel başarıyla eklendi"
-      });
-      queryClient.invalidateQueries({ queryKey: ["personnel"] });
-      if (onSuccess) onSuccess();
-    },
-    onError: (error) => {
-      console.error("Personel ekleme hatası:", error);
-      toast({
-        title: "Hata",
-        description: "Personel eklenirken bir hata oluştu: " + error.message,
-        variant: "destructive"
-      });
+      
+      // Update request status
+      const { error: updateError } = await supabase
+        .from("personel_katilim_istekleri")
+        .update({ durum: "kabul_edildi" })
+        .eq("id", requestId);
+      
+      if (updateError) {
+        console.error("Error updating request status:", updateError);
+        toast.error("İstek durumu güncellenemedi");
+        return false;
+      }
+      
+      toast.success("Personel katılım isteği kabul edildi");
+      return true;
+    } catch (error) {
+      console.error("Error accepting staff join request:", error);
+      toast.error("İstek işlenirken bir hata oluştu");
+      return false;
+    } finally {
+      setLoading(false);
     }
-  });
+  };
+
+  // Reject staff join request
+  const rejectStaffJoinRequest = async (requestId: string): Promise<boolean> => {
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from("personel_katilim_istekleri")
+        .update({ durum: "reddedildi" })
+        .eq("id", requestId);
+      
+      if (error) {
+        console.error("Error rejecting join request:", error);
+        toast.error("İstek reddedilemedi");
+        return false;
+      }
+      
+      toast.success("Personel katılım isteği reddedildi");
+      return true;
+    } catch (error) {
+      console.error("Error rejecting staff join request:", error);
+      toast.error("İstek işlenirken bir hata oluştu");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    loading,
+    createPersonnel,
+    updatePersonnel,
+    deletePersonnel,
+    acceptStaffJoinRequest,
+    rejectStaffJoinRequest
+  };
 }

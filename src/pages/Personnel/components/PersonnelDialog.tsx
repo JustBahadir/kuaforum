@@ -1,115 +1,65 @@
 
-import {
+import { useState } from "react";
+import { 
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Copy } from "lucide-react";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { useShopData } from "@/hooks/useShopData";
-import { toast } from "sonner";
-import { isletmeServisi } from "@/lib/supabase"; // This import should now work with our fix
+import { PersonnelForm } from "./PersonnelForm";
+import { usePersonnelMutation } from "../hooks/usePersonnelMutation";
+import { Personel } from "@/types/personnel";
 
 interface PersonnelDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  personnel?: Personel | null;
+  isEditMode: boolean;
 }
 
-export function PersonnelDialog({ open, onOpenChange }: PersonnelDialogProps) {
-  const { userRole } = useCustomerAuth();
-  const { isletmeData } = useShopData(null);
-  const [businessCode, setBusinessCode] = useState<string>("");
-  const [copied, setCopied] = useState(false);
+export function PersonnelDialog({
+  isOpen,
+  onClose,
+  onSuccess,
+  personnel,
+  isEditMode,
+}: PersonnelDialogProps) {
+  const { createPersonnel, updatePersonnel, loading } = usePersonnelMutation();
   
-  useEffect(() => {
-    if (open && isletmeData?.id) {
-      fetchBusinessCode();
-    }
-  }, [open, isletmeData?.id]);
-  
-  const fetchBusinessCode = async () => {
-    if (!isletmeData?.id) return;
+  const handleSubmit = async (formData: Omit<Personel, "id" | "created_at">) => {
+    let success = false;
     
-    try {
-      if (isletmeData?.kod) {
-        setBusinessCode(isletmeData.kod);
-      } else {
-        const dukkanData = await isletmeServisi.getirById(isletmeData.id);
-        if (dukkanData?.kod) {
-          setBusinessCode(dukkanData.kod);
-        }
-      }
-    } catch (error) {
-      console.error("İşletme kodu alınırken hata:", error);
+    if (isEditMode && personnel) {
+      const result = await updatePersonnel(personnel.id.toString(), formData);
+      success = !!result;
+    } else {
+      const result = await createPersonnel(formData);
+      success = !!result;
     }
-  };
-  
-  const copyToClipboard = () => {
-    if (!businessCode) return;
     
-    try {
-      navigator.clipboard.writeText(businessCode);
-      setCopied(true);
-      toast.success("İşletme kodu panoya kopyalandı");
-      setTimeout(() => {
-        setCopied(false);
-      }, 3000);
-    } catch (error) {
-      console.error("Kopyalama hatası:", error);
-      toast.error("Kopyalama işlemi başarısız oldu");
+    if (success) {
+      onSuccess();
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) onClose();
+    }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Personel Sistemi</DialogTitle>
+          <DialogTitle>
+            {isEditMode ? "Personel Düzenle" : "Yeni Personel Ekle"}
+          </DialogTitle>
         </DialogHeader>
         
-        <Alert className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Personel eklemek için, personellerinizin dükkan kodunuzu kullanarak üye olmalarını sağlayın. 
-            Aşağıda görünen kodu personelleriniz ile paylaşın.
-          </AlertDescription>
-        </Alert>
-        
-        {userRole === 'admin' ? (
-          <div className="space-y-4">
-            <div className="mt-2">
-              <div className="text-sm font-medium mb-1">İşletme Kodu</div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 border rounded-md p-2 bg-muted">
-                  <code className="text-sm">{businessCode || "Yükleniyor..."}</code>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={copyToClipboard}
-                  disabled={!businessCode}
-                  className={copied ? "text-green-500" : ""}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Bu kodu personellerinize vererek sisteme kayıt olmalarını sağlayabilirsiniz.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Yalnızca İşletme Sahipleri personel ekleyebilir.
-            </AlertDescription>
-          </Alert>
-        )}
+        <PersonnelForm
+          personel={personnel || undefined}
+          onSubmit={handleSubmit}
+          onCancel={onClose}
+          isLoading={loading}
+        />
       </DialogContent>
     </Dialog>
   );

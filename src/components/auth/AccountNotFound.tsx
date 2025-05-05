@@ -4,7 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Home, UserPlus, LogIn } from "lucide-react";
 
-export default function AccountNotFound() {
+interface AccountNotFoundProps {
+  accountExists?: boolean;
+}
+
+export default function AccountNotFound({ accountExists = false }: AccountNotFoundProps) {
   const navigate = useNavigate();
 
   const handleRegister = () => {
@@ -24,7 +28,7 @@ export default function AccountNotFound() {
       <Card className="w-full max-w-md shadow-lg border border-red-100">
         <CardHeader className="text-center">
           <CardTitle className="text-center bg-gradient-to-r from-pink-500 to-purple-500 text-white p-4 rounded-t-lg">
-            Hesap Bulunamadı
+            {accountExists ? "Hesap Zaten Var" : "Hesap Bulunamadı"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6 p-6">
@@ -38,16 +42,20 @@ export default function AccountNotFound() {
             </div>
           </div>
           <p className="text-center text-red-500 font-medium text-lg">
-            Bu Gmail'e kayıtlı bir hesap bulunmamaktadır.
+            {accountExists 
+              ? "Bu Gmail hesabı zaten kayıtlı. Lütfen giriş yapın." 
+              : "Bu Gmail'e kayıtlı bir hesap bulunmamaktadır."}
           </p>
           <div className="flex flex-col gap-4">
-            <Button 
-              onClick={handleRegister}
-              className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 h-12 text-lg"
-            >
-              <UserPlus className="mr-2 h-5 w-5" />
-              Kayıt olmak için tıklayın
-            </Button>
+            {!accountExists && (
+              <Button 
+                onClick={handleRegister}
+                className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 h-12 text-lg"
+              >
+                <UserPlus className="mr-2 h-5 w-5" />
+                Kayıt olmak için tıklayın
+              </Button>
+            )}
             <Button 
               onClick={handleLogin}
               variant="outline"

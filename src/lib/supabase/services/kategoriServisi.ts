@@ -65,7 +65,12 @@ export const kategoriServisi = {
     return true;
   },
   
-  // Add the missing sirayiGuncelle function
+  // Added the olustur function (alias for ekle)
+  olustur: async (kategori: any) => {
+    return kategoriServisi.ekle(kategori);
+  },
+  
+  // Function to update the order of categories
   sirayiGuncelle: async (categories: { id: string, sira: number }[]) => {
     // Prepare the updates for a batch operation
     const updates = categories.map(category => ({

@@ -1,302 +1,272 @@
 
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { StaffLayout } from "@/components/ui/staff-layout";
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { kategorilerServisi, islemServisi } from "@/lib/supabase";
-import { useShopData } from "@/hooks/useShopData";
-import { ServicesContent } from "@/components/operations/ServicesContent";
-import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { isletmeServisi, personelServisi, kategoriServisi, islemServisi } from "@/lib/supabase";
+import { ServicesList } from "@/components/operations/ServicesList";
+import { ServiceCategoriesList } from "@/components/operations/ServiceCategoriesList";
+import { ServiceForm } from "@/components/operations/ServiceForm";
+import { CategoryForm } from "@/components/operations/CategoryForm";
+import { WorkingHours } from "@/components/operations/WorkingHours";
 
 export default function StaffOperations() {
-  const [activeTab, setActiveTab] = useState("services");
-  const { isletmeData } = useShopData();
-  const dukkanId = isletmeData?.id ?? 0;
-  
-  // State for ServicesContent component
+  // State variables
   const [kategoriler, setKategoriler] = useState<any[]>([]);
   const [islemler, setIslemler] = useState<any[]>([]);
   const [dialogAcik, setDialogAcik] = useState(false);
   const [kategoriDialogAcik, setKategoriDialogAcik] = useState(false);
-  const [kategoriDuzenleDialogAcik, setKategoriDuzenleDialogAcik] = useState(false);
-  const [yeniKategoriAdi, setYeniKategoriAdi] = useState("");
-  const [duzenleKategoriId, setDuzenleKategoriId] = useState<number | null>(null);
-  const [duzenleKategoriAdi, setDuzenleKategoriAdi] = useState("");
-  const [islemAdi, setIslemAdi] = useState("");
-  const [fiyat, setFiyat] = useState(0);
-  const [maliyet, setMaliyet] = useState(0);
-  const [puan, setPuan] = useState(0);
-  const [kategoriId, setKategoriId] = useState<number | null>(null);
-  const [duzenleId, setDuzenleId] = useState<number | null>(null);
+  const [seciliKategori, setSeciliKategori] = useState<any>(null);
+  const [seciliIslem, setSeciliIslem] = useState<any>(null);
+  const [modeIsAdd, setModeIsAdd] = useState(true);
+  const [activeTab, setActiveTab] = useState("hizmetler");
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [inactiveKategoriler, setInactiveKategoriler] = useState<any[]>([]);
+  const [showInactive, setShowInactive] = useState(false);
   const [puanlamaAktif, setPuanlamaAktif] = useState(false);
 
-  // Fetch categories
-  const {
-    data: fetchedCategories = [],
-    isLoading: isCategoriesLoading,
-    refetch: refetchCategories
-  } = useQuery({
-    queryKey: ["categories", dukkanId],
-    queryFn: async () => {
-      console.log("Fetching categories for dukkanId:", dukkanId);
-      if (!dukkanId) {
-        console.warn("DukkanId is missing for category fetch");
-        return [];
-      }
-      return kategorilerServisi.hepsiniGetir(dukkanId);
-    },
-    enabled: !!dukkanId,
-  });
+  const { toast } = useToast();
+  const { isletmeId } = useAuth();
 
-  // Fetch services
-  const {
-    data: fetchedServices = [],
-    isLoading: isServicesLoading,
-    refetch: refetchServices
-  } = useQuery({
-    queryKey: ["services", dukkanId],
-    queryFn: async () => {
-      console.log("Fetching services for dukkanId:", dukkanId);
-      if (!dukkanId) {
-        console.warn("DukkanId is missing for service fetch");
-        return [];
-      }
-      return islemServisi.hepsiniGetir(dukkanId);
-    },
-    enabled: !!dukkanId,
-  });
-
-  // Update state when data is fetched
+  // Fetch categories and services
   useEffect(() => {
-    console.log("Categories updated:", fetchedCategories);
-    setKategoriler(fetchedCategories);
-  }, [fetchedCategories]);
-
-  useEffect(() => {
-    console.log("Services updated:", fetchedServices);
-    setIslemler(fetchedServices);
-  }, [fetchedServices]);
-  
-  // Handle category add
-  const handleAddCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
+    if (!isletmeId) return;
     
-    if (!dukkanId) {
-      toast.error("İşletme bilgisi bulunamadı");
-      return;
-    }
-    
-    try {
-      console.log("Adding category with dukkanId:", dukkanId);
-      await kategorilerServisi.ekle({
-        kategori_adi: yeniKategoriAdi,
-        dukkan_id: dukkanId
-      });
-      
-      refetchCategories();
-      toast.success("Kategori başarıyla eklendi");
-      setKategoriDialogAcik(false);
-      setYeniKategoriAdi("");
-    } catch (error: any) {
-      console.error("Kategori eklenirken hata:", error);
-      toast.error(`Kategori eklenirken hata oluştu: ${error.message}`);
-    }
-  };
-  
-  // Handle category edit
-  const handleEditCategory = (kategori: any) => {
-    setDuzenleKategoriId(kategori.id);
-    setDuzenleKategoriAdi(kategori.kategori_adi);
-    setKategoriDuzenleDialogAcik(true);
-  };
-  
-  const handleUpdateCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!duzenleKategoriId) return;
-    
-    try {
-      await kategorilerServisi.guncelle(duzenleKategoriId, {
-        kategori_adi: duzenleKategoriAdi
-      });
-      
-      refetchCategories();
-      toast.success("Kategori başarıyla güncellendi");
-      setKategoriDuzenleDialogAcik(false);
-    } catch (error: any) {
-      console.error("Kategori güncellenirken hata:", error);
-      toast.error(`Kategori güncellenirken hata oluştu: ${error.message}`);
-    }
-  };
-  
-  // Handle category delete
-  const handleDeleteCategory = async (kategoriId: number) => {
-    try {
-      await kategorilerServisi.sil(kategoriId);
-      refetchCategories();
-      toast.success("Kategori başarıyla silindi");
-      
-      // Also refresh services since related services might be affected
-      refetchServices();
-    } catch (error: any) {
-      console.error("Kategori silinirken hata:", error);
-      toast.error(`Kategori silinirken hata oluştu: ${error.message}`);
-    }
-  };
-  
-  // Handle service add/edit
-  const handleServiceFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!dukkanId) {
-      toast.error("İşletme bilgisi bulunamadı");
-      return;
-    }
-    
-    try {
-      const serviceData = {
-        islem_adi: islemAdi,
-        fiyat,
-        maliyet,
-        puan,
-        kategori_id: kategoriId,
-        dukkan_id: dukkanId
-      };
-      
-      if (duzenleId) {
-        await islemServisi.guncelle(duzenleId, serviceData);
-        toast.success("Hizmet başarıyla güncellendi");
-      } else {
-        await islemServisi.ekle(serviceData);
-        toast.success("Hizmet başarıyla eklendi");
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch categories
+        const kategorilerData = await kategoriServisi.isletmeyeGoreGetir(isletmeId);
+        const aktifKategoriler = kategorilerData.filter((k: any) => k.aktif !== false);
+        const inaktifKategoriler = kategorilerData.filter((k: any) => k.aktif === false);
+        
+        setKategoriler(aktifKategoriler);
+        setInactiveKategoriler(inaktifKategoriler);
+        
+        // Fetch services
+        const islemlerData = await islemServisi.isletmeyeGoreGetir(isletmeId);
+        setIslemler(islemlerData);
+        
+        // Check if points are enabled
+        const { data: isletme } = await isletmeServisi.getir(isletmeId);
+        setPuanlamaAktif(isletme?.puan_sistemi_aktif || false);
+      } catch (error) {
+        console.error("Veri çekme hatası:", error);
+        toast({
+          variant: "destructive",
+          title: "Hata",
+          description: "Veri çekilirken bir sorun oluştu.",
+        });
+      } finally {
+        setIsLoading(false);
       }
-      
-      refetchServices();
-      setDialogAcik(false);
-      formuSifirla();
-    } catch (error: any) {
-      console.error("Hizmet işlemi hatası:", error);
-      toast.error(`İşlem hatası: ${error.message}`);
-    }
-  };
-  
-  // Handle service edit
-  const handleServiceEdit = (service: any) => {
-    setIslemAdi(service.islem_adi);
-    setFiyat(service.fiyat);
-    setMaliyet(service.maliyet || 0);
-    setPuan(service.puan || 0);
-    setKategoriId(service.kategori_id);
-    setDuzenleId(service.id);
+    };
+    
+    fetchData();
+  }, [isletmeId, refreshTrigger]);
+
+  // Handle add service
+  const handleAddService = () => {
+    setSeciliIslem(null);
+    setModeIsAdd(true);
     setDialogAcik(true);
   };
-  
-  // Handle service delete
-  const handleServiceDelete = async (serviceId: number) => {
+
+  // Handle edit service
+  const handleEditService = (islem: any) => {
+    setSeciliIslem(islem);
+    setModeIsAdd(false);
+    setDialogAcik(true);
+  };
+
+  // Handle service form success
+  const handleServiceSuccess = async () => {
+    setDialogAcik(false);
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  // Handle add category
+  const handleAddCategory = () => {
+    setSeciliKategori(null);
+    setModeIsAdd(true);
+    setKategoriDialogAcik(true);
+  };
+
+  // Handle edit category
+  const handleEditCategory = (kategori: any) => {
+    setSeciliKategori(kategori);
+    setModeIsAdd(false);
+    setKategoriDialogAcik(true);
+  };
+
+  // Handle category form success
+  const handleCategorySuccess = () => {
+    setKategoriDialogAcik(false);
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  // Handle delete category
+  const handleDeleteCategory = async (kategoriId: string) => {
+    if (!window.confirm("Bu kategoriyi silmek istediğinize emin misiniz?")) return;
+    
     try {
-      await islemServisi.sil(serviceId);
-      refetchServices();
-      toast.success("Hizmet başarıyla silindi");
-    } catch (error: any) {
-      console.error("Hizmet silinirken hata:", error);
-      toast.error(`Hizmet silinirken hata oluştu: ${error.message}`);
+      await kategoriServisi.sil(kategoriId);
+      toast({
+        title: "Başarılı",
+        description: "Kategori başarıyla silindi.",
+      });
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error("Kategori silme hatası:", error);
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Kategori silinirken bir sorun oluştu.",
+      });
     }
   };
-  
-  // Handle service order change
-  const handleServiceOrderChange = async (items: any[]) => {
+
+  // Handle delete service
+  const handleDeleteService = async (islemId: string) => {
+    if (!window.confirm("Bu hizmeti silmek istediğinize emin misiniz?")) return;
+    
     try {
-      const updatedItems = items.map((item, index) => ({
-        ...item,
-        sira: index
-      }));
-      
-      await islemServisi.sirayiGuncelle(updatedItems);
-      refetchServices();
-    } catch (error: any) {
-      console.error("Sıralama güncellenirken hata:", error);
-      toast.error("Sıralama güncellenirken bir hata oluştu");
+      await islemServisi.sil(islemId);
+      toast({
+        title: "Başarılı",
+        description: "Hizmet başarıyla silindi.",
+      });
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error("Hizmet silme hatası:", error);
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Hizmet silinirken bir sorun oluştu.",
+      });
     }
   };
-  
-  // Handle category order change
-  const handleCategoryOrderChange = async (items: any[]) => {
+
+  // Handle changes to category order
+  const handleCategoryOrderChange = async (newOrder: any[]) => {
     try {
-      const updatedItems = items.map((item, index) => ({
+      const updateData = newOrder.map((item, index) => ({
         id: item.id,
         sira: index
       }));
       
-      await kategorilerServisi.sirayiGuncelle(updatedItems);
-      refetchCategories();
-    } catch (error: any) {
+      await kategoriServisi.sirayiGuncelle(updateData);
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
       console.error("Kategori sıralaması güncellenirken hata:", error);
-      toast.error("Kategori sıralaması güncellenirken bir hata oluştu");
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Kategori sıralaması güncellenirken bir sorun oluştu.",
+      });
     }
   };
-  
-  // Reset form fields
-  const formuSifirla = () => {
-    setIslemAdi("");
-    setFiyat(0);
-    setMaliyet(0);
-    setPuan(0);
-    setKategoriId(null);
-    setDuzenleId(null);
-  };
-  
-  // Handle appointment from service
-  const handleRandevuAl = (islemId: number) => {
-    console.log("Randevu alınıyor, islem ID:", islemId);
-  };
-  
+
   return (
-    <StaffLayout>
-      <div className="container p-4 mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Hizmet Yönetimi</h1>
+    <div className="container mx-auto py-6 space-y-6">
+      <h1 className="text-2xl font-bold">İşlemler Yönetimi</h1>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="hizmetler">Hizmetler</TabsTrigger>
+          <TabsTrigger value="kategoriler">Kategoriler</TabsTrigger>
+          <TabsTrigger value="calisma-saatleri">Çalışma Saatleri</TabsTrigger>
+        </TabsList>
         
-        <ServicesContent
-          isStaff={true}
-          kategoriler={kategoriler}
-          islemler={islemler}
-          dialogAcik={dialogAcik}
-          setDialogAcik={setDialogAcik}
-          kategoriDialogAcik={kategoriDialogAcik}
-          setKategoriDialogAcik={setKategoriDialogAcik}
-          kategoriDuzenleDialogAcik={kategoriDuzenleDialogAcik}
-          setKategoriDuzenleDialogAcik={setKategoriDuzenleDialogAcik}
-          yeniKategoriAdi={yeniKategoriAdi}
-          setYeniKategoriAdi={setYeniKategoriAdi}
-          duzenleKategoriId={duzenleKategoriId}
-          duzenleKategoriAdi={duzenleKategoriAdi}
-          setDuzenleKategoriAdi={setDuzenleKategoriAdi}
-          islemAdi={islemAdi}
-          setIslemAdi={setIslemAdi}
-          fiyat={fiyat}
-          setFiyat={setFiyat}
-          maliyet={maliyet}
-          setMaliyet={setMaliyet}
-          puan={puan}
-          setPuan={setPuan}
-          kategoriId={kategoriId}
-          setKategoriId={setKategoriId}
-          duzenleId={duzenleId}
-          onServiceFormSubmit={handleServiceFormSubmit}
-          onCategoryFormSubmit={handleAddCategory}
-          onCategoryEditFormSubmit={handleUpdateCategory}
-          onServiceEdit={handleServiceEdit}
-          onServiceDelete={handleServiceDelete}
-          onCategoryDelete={handleDeleteCategory}
-          onCategoryEdit={handleEditCategory}
-          onSiralamaChange={handleServiceOrderChange}
-          onCategoryOrderChange={handleCategoryOrderChange}
-          onRandevuAl={handleRandevuAl}
-          formuSifirla={formuSifirla}
-          dukkanId={dukkanId}
-          puanlamaAktif={puanlamaAktif}
-          setPuanlamaAktif={setPuanlamaAktif}
-        />
-      </div>
-    </StaffLayout>
+        <TabsContent value="hizmetler" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Salon Hizmetleri</h2>
+            <Button onClick={handleAddService}>Yeni Hizmet Ekle</Button>
+          </div>
+          
+          <ServicesList 
+            isStaff={true}
+            kategoriler={kategoriler}
+            islemler={islemler}
+            dialogAcik={dialogAcik}
+            setDialogAcik={setDialogAcik}
+            kategoriDialogAcik={kategoriDialogAcik}
+            setKategoriDialogAcik={setKategoriDialogAcik}
+            seciliKategori={seciliKategori}
+            setSeciliKategori={setSeciliKategori}
+            seciliIslem={seciliIslem}
+            setSeciliIslem={setSeciliIslem}
+            modeIsAdd={modeIsAdd}
+            setModeIsAdd={setModeIsAdd}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            refreshTrigger={refreshTrigger}
+            setRefreshTrigger={setRefreshTrigger}
+            isLoading={isLoading}
+            setIsLoading={setIsLoading}
+            inactiveKategoriler={inactiveKategoriler}
+            setInactiveKategoriler={setInactiveKategoriler}
+            showInactive={showInactive}
+            setShowInactive={setShowInactive}
+            handleAddService={handleAddService}
+            handleEditService={handleEditService}
+            handleServiceSuccess={handleServiceSuccess}
+            handleAddCategory={handleAddCategory}
+            handleEditCategory={handleEditCategory}
+            handleCategorySuccess={handleCategorySuccess}
+            handleDeleteCategory={handleDeleteCategory}
+            handleDeleteService={handleDeleteService}
+            handleCategoryOrderChange={handleCategoryOrderChange}
+            puanlamaAktif={puanlamaAktif}
+            setPuanlamaAktif={setPuanlamaAktif}
+          />
+          
+          {dialogAcik && (
+            <ServiceForm
+              isletmeId={isletmeId}
+              kategoriler={kategoriler}
+              islem={seciliIslem}
+              onSuccess={handleServiceSuccess}
+              onCancel={() => setDialogAcik(false)}
+              puanlamaAktif={puanlamaAktif}
+              setPuanlamaAktif={setPuanlamaAktif}
+            />
+          )}
+        </TabsContent>
+        
+        <TabsContent value="kategoriler" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Hizmet Kategorileri</h2>
+            <Button onClick={handleAddCategory}>Yeni Kategori Ekle</Button>
+          </div>
+          
+          <ServiceCategoriesList 
+            kategoriler={kategoriler}
+            onEdit={handleEditCategory}
+            onDelete={handleDeleteCategory}
+            onOrderChange={handleCategoryOrderChange}
+            inactiveKategoriler={inactiveKategoriler}
+            showInactive={showInactive}
+            setShowInactive={setShowInactive}
+          />
+          
+          {kategoriDialogAcik && (
+            <CategoryForm
+              dukkanId={isletmeId}
+              kategori={seciliKategori}
+              onSuccess={handleCategorySuccess}
+              onCancel={() => setKategoriDialogAcik(false)}
+            />
+          )}
+        </TabsContent>
+        
+        <TabsContent value="calisma-saatleri">
+          <WorkingHours />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

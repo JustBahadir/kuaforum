@@ -22,7 +22,7 @@ export default function AuthGoogleCallback() {
         console.log("Handling auth callback, mode:", mode);
 
         // Get the current session
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        const { data, error: userError } = await supabase.auth.getUser();
         
         if (userError) {
           console.error("User error:", userError);
@@ -32,20 +32,20 @@ export default function AuthGoogleCallback() {
         }
         
         // Check if we have a user
-        if (!user) {
+        if (!data.user) {
           console.log("No user found in session");
           setError("Giriş bilgileri alınamadı. Lütfen tekrar giriş yapın.");
           setLoading(false);
           return;
         }
 
-        console.log("Auth callback - User:", user.email);
+        console.log("Auth callback - User:", data.user.email);
 
         // Check for user profile in kullanicilar table
         const { data: kullanici, error: kullaniciError } = await supabase
           .from("kullanicilar")
           .select("*")
-          .eq("kimlik", user.id)
+          .eq("kimlik", data.user.id)
           .maybeSingle();
 
         if (kullaniciError && kullaniciError.code !== 'PGRST116') {

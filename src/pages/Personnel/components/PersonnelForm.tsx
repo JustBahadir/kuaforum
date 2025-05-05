@@ -1,413 +1,202 @@
 
 import { useState, useEffect } from "react";
-import { Personel } from "@/types/personnel"; // Updated import path
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
+import { 
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { authService } from "@/lib/auth/authService";
-import { toast } from "sonner";
-import { dukkanServisi } from "@/lib/supabase"; // Updated import
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/hooks/useAuth";
+import { Personel, PersonnelFormProps } from "@/types/personnel";
 
-export interface PersonnelFormProps {
-  personnel?: any;
-  onChange?: (field: string, value: any) => void;
-  readOnly?: boolean;
-  showWorkInfo?: boolean;
-  showPersonalInfo?: boolean;
-  onSubmit?: (data: any) => void;
-  isLoading?: boolean;
-}
-
-export function PersonnelForm({ onSubmit, isLoading }: PersonnelFormProps) {
-  const { dukkanId, userRole } = useCustomerAuth();
-  const [yeniPersonel, setYeniPersonel] = useState<Omit<Personel, 'id' | 'created_at'>>({
-    ad_soyad: "",
-    telefon: "",
+export function PersonnelForm({
+  personel,
+  onSubmit,
+  onCancel,
+  isLoading = false
+}: PersonnelFormProps) {
+  const { isletmeId } = useAuth();
+  const [formData, setFormData] = useState<Omit<Personel, "id" | "created_at">>({
+    dukkan_id: isletmeId || "", // Changed to string
     eposta: "",
+    telefon: "",
     adres: "",
-    personel_no: "",
+    ad_soyad: "",
     maas: 0,
-    calisma_sistemi: "aylik",
     prim_yuzdesi: 0,
-    dukkan_id: dukkanId || undefined
+    personel_no: "",
+    calisma_sistemi: "tam_zamanli",
   });
-  
-  const [isletmeKodu, setIsletmeKodu] = useState("");
-  const [dogrulamaYapiliyor, setDogrulamaYapiliyor] = useState(false);
-  const [dogrulanmisIsletme, setDogrulanmisIsletme] = useState<{id: number, ad: string} | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  
+
+  // Load existing personnel data if provided
   useEffect(() => {
-    if (dukkanId) {
-      setYeniPersonel(prev => ({
-        ...prev,
-        dukkan_id: dukkanId
-      }));
+    if (personel) {
+      setFormData({
+        dukkan_id: personel.dukkan_id.toString(), // Convert to string
+        eposta: personel.eposta || "",
+        telefon: personel.telefon || "",
+        adres: personel.adres || "",
+        ad_soyad: personel.ad_soyad || "",
+        maas: personel.maas || 0,
+        prim_yuzdesi: personel.prim_yuzdesi || 0,
+        personel_no: personel.personel_no || "",
+        iban: personel.iban || "",
+        calisma_sistemi: personel.calisma_sistemi || "tam_zamanli",
+        birth_date: personel.birth_date,
+        auth_id: personel.auth_id,
+        avatar_url: personel.avatar_url
+      });
     }
-  }, [dukkanId]);
-  
-  const handleVerifyShopCode = async () => {
-    if (!isletmeKodu) {
-      toast.error("Lütfen işletme kodunu girin");
-      return;
-    }
+  }, [personel]);
+
+  // Handle form input changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     
-    setDogrulamaYapiliyor(true);
-    setFormError(null);
-    
-    try {
-      const isletme = await authService.verifyShopCode(isletmeKodu);
-      
-      if (isletme) {
-        setDogrulanmisIsletme(isletme);
-        setYeniPersonel(prev => ({
-          ...prev,
-          dukkan_id: isletme.id
-        }));
-        toast.success(`"${isletme.ad}" işletmesi doğrulandı!`);
-      } else {
-        setDogrulanmisIsletme(null);
-        toast.error("Geçersiz işletme kodu");
-        setFormError("Girdiğiniz işletme kodu sistemde bulunamadı. Lütfen kodu kontrol edip tekrar deneyiniz.");
-      }
-    } catch (error) {
-      console.error("İşletme kodu doğrulama hatası:", error);
-      toast.error("İşletme kodu doğrulanırken bir hata oluştu");
-      setFormError("İşletme kodu doğrulanırken bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.");
-    } finally {
-      setDogrulamaYapiliyor(false);
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === "maas" || name === "prim_yuzdesi" 
+        ? parseFloat(value) || 0 
+        : value
+    }));
   };
 
-  const validateFormFields = () => {
-    setFormError(null);
-    
-    if (userRole === 'admin') {
-      if (!dukkanId) {
-        setFormError("Personel eklemek için bir dükkana bağlı olmanız gerekmektedir.");
-        return false;
-      }
-      
-      if (!yeniPersonel.ad_soyad) {
-        setFormError("Ad Soyad alanı gereklidir.");
-        return false;
-      }
-      
-      if (!yeniPersonel.telefon) {
-        setFormError("Telefon alanı gereklidir.");
-        return false;
-      }
-      
-      if (!yeniPersonel.eposta) {
-        setFormError("E-posta alanı gereklidir.");
-        return false;
-      }
-    } 
-    else {
-      if (!dogrulanmisIsletme) {
-        setFormError("Lütfen önce dükkan kodunu doğrulayın.");
-        return false;
-      }
-      
-      if (!yeniPersonel.ad_soyad) {
-        setFormError("Ad Soyad alanı gereklidir.");
-        return false;
-      }
-      
-      if (!yeniPersonel.telefon) {
-        setFormError("Telefon alanı gereklidir.");
-        return false;
-      }
-      
-      if (!yeniPersonel.eposta) {
-        setFormError("E-posta alanı gereklidir.");
-        return false;
-      }
-    }
-    
-    return true;
+  // Handle form dropdown select changes
+  const handleSelectChange = (value: string, name: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
+  // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateFormFields()) {
-      return;
-    }
-    
-    if (userRole === 'admin') {
-      const personelData = {
-        ...yeniPersonel,
-        dukkan_id: dukkanId || undefined
-      };
-      
-      if (!personelData.dukkan_id) {
-        setFormError("Personel eklemek için bir dükkana bağlı olmanız gerekmektedir.");
-        return;
-      }
-      
-      onSubmit(personelData);
-      return;
-    }
-    
-    if (!dogrulanmisIsletme) {
-      setFormError("Lütfen önce dükkan kodunu doğrulayın");
-      return;
-    }
-    
-    const personelData = {
-      ...yeniPersonel,
-      dukkan_id: dogrulanmisIsletme.id
-    };
-    
-    onSubmit(personelData);
+    onSubmit(formData);
   };
 
-  if (userRole === 'admin') {
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {formError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{formError}</AlertDescription>
-          </Alert>
-        )}
-        
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="ad_soyad">Ad Soyad</Label>
-          <Input
-            id="ad_soyad"
-            value={yeniPersonel.ad_soyad}
-            onChange={(e) =>
-              setYeniPersonel((prev) => ({
-                ...prev,
-                ad_soyad: e.target.value,
-              }))
-            }
-            required
+          <Input 
+            id="ad_soyad" 
+            name="ad_soyad" 
+            value={formData.ad_soyad} 
+            onChange={handleChange} 
+            required 
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="telefon">Telefon</Label>
-          <Input
-            id="telefon"
-            type="tel"
-            value={yeniPersonel.telefon}
-            onChange={(e) =>
-              setYeniPersonel((prev) => ({
-                ...prev,
-                telefon: e.target.value,
-              }))
-            }
-            required
-          />
-        </div>
+        
         <div className="space-y-2">
           <Label htmlFor="eposta">E-posta</Label>
-          <Input
-            id="eposta"
-            type="email"
-            value={yeniPersonel.eposta}
-            onChange={(e) =>
-              setYeniPersonel((prev) => ({
-                ...prev,
-                eposta: e.target.value,
-              }))
-            }
-            required
+          <Input 
+            id="eposta" 
+            name="eposta" 
+            type="email" 
+            value={formData.eposta} 
+            onChange={handleChange} 
+            required 
           />
         </div>
+        
         <div className="space-y-2">
-          <Label htmlFor="adres">Adres</Label>
-          <Input
-            id="adres"
-            value={yeniPersonel.adres}
-            onChange={(e) =>
-              setYeniPersonel((prev) => ({
-                ...prev,
-                adres: e.target.value,
-              }))
-            }
-            required
+          <Label htmlFor="telefon">Telefon</Label>
+          <Input 
+            id="telefon" 
+            name="telefon" 
+            value={formData.telefon} 
+            onChange={handleChange} 
+            required 
           />
         </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="personel_no">Personel No</Label>
+          <Input 
+            id="personel_no" 
+            name="personel_no" 
+            value={formData.personel_no} 
+            onChange={handleChange} 
+            required 
+          />
+        </div>
+        
         <div className="space-y-2">
           <Label htmlFor="maas">Maaş</Label>
-          <Input
-            id="maas"
-            type="number"
-            value={yeniPersonel.maas}
-            onChange={(e) =>
-              setYeniPersonel((prev) => ({
-                ...prev,
-                maas: Number(e.target.value),
-              }))
-            }
-            required
+          <Input 
+            id="maas" 
+            name="maas" 
+            type="number" 
+            value={formData.maas} 
+            onChange={handleChange} 
+            required 
           />
         </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="prim_yuzdesi">Prim Yüzdesi (%)</Label>
+          <Input 
+            id="prim_yuzdesi" 
+            name="prim_yuzdesi" 
+            type="number" 
+            value={formData.prim_yuzdesi} 
+            onChange={handleChange} 
+            required 
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="iban">IBAN</Label>
+          <Input 
+            id="iban" 
+            name="iban" 
+            value={formData.iban || ""} 
+            onChange={handleChange} 
+          />
+        </div>
+        
         <div className="space-y-2">
           <Label htmlFor="calisma_sistemi">Çalışma Sistemi</Label>
-          <Select
-            value={yeniPersonel.calisma_sistemi}
-            onValueChange={(value) =>
-              setYeniPersonel((prev) => ({
-                ...prev,
-                calisma_sistemi: value as "haftalik" | "aylik",
-              }))
-            }
+          <Select 
+            value={formData.calisma_sistemi} 
+            onValueChange={(value) => handleSelectChange(value, "calisma_sistemi")}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Çalışma Sistemi Seçin" />
+              <SelectValue placeholder="Çalışma sistemi seçin" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="haftalik">Haftalık</SelectItem>
-              <SelectItem value="aylik">Aylık</SelectItem>
+              <SelectItem value="tam_zamanli">Tam Zamanlı</SelectItem>
+              <SelectItem value="yari_zamanli">Yarı Zamanlı</SelectItem>
+              <SelectItem value="sozlesmeli">Sözleşmeli</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="prim_yuzdesi">Prim Yüzdesi</Label>
-          <Input
-            id="prim_yuzdesi"
-            type="number"
-            value={yeniPersonel.prim_yuzdesi}
-            onChange={(e) =>
-              setYeniPersonel((prev) => ({
-                ...prev,
-                prim_yuzdesi: Number(e.target.value),
-              }))
-            }
-            required
-          />
-        </div>
-        <Button type="submit" disabled={isLoading || !dukkanId} className="w-full">
-          {isLoading ? "Ekleniyor..." : "Personel Ekle"}
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="adres">Adres</Label>
+        <Input 
+          id="adres" 
+          name="adres" 
+          value={formData.adres} 
+          onChange={handleChange} 
+        />
+      </div>
+      
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+          İptal
         </Button>
-        {!dukkanId && (
-          <p className="text-xs text-red-500 text-center">
-            Personel eklemek için bir dükkana bağlı olmanız gerekmektedir.
-          </p>
-        )}
-      </form>
-    );
-  } else {
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {formError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{formError}</AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="space-y-2 mb-6">
-          <Label htmlFor="isletme_kodu">İşletme Kodu</Label>
-          <div className="flex space-x-2">
-            <Input
-              id="isletme_kodu"
-              value={isletmeKodu}
-              onChange={(e) => setIsletmeKodu(e.target.value)}
-              placeholder="İşletme yöneticisinden alınan kod"
-              disabled={!!dogrulanmisIsletme}
-              required
-            />
-            <Button 
-              type="button" 
-              onClick={handleVerifyShopCode} 
-              disabled={dogrulamaYapiliyor || !!dogrulanmisIsletme || !isletmeKodu}
-              variant="outline"
-            >
-              {dogrulamaYapiliyor ? "..." : "Doğrula"}
-            </Button>
-          </div>
-          {dogrulanmisIsletme && (
-            <p className="text-sm text-green-600 mt-1">
-              "{dogrulanmisIsletme.ad}" işletmesine bağlanacaksınız.
-            </p>
-          )}
-        </div>
-
-        {dogrulanmisIsletme && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="ad_soyad">Ad Soyad</Label>
-              <Input
-                id="ad_soyad"
-                value={yeniPersonel.ad_soyad}
-                onChange={(e) =>
-                  setYeniPersonel((prev) => ({
-                    ...prev,
-                    ad_soyad: e.target.value,
-                  }))
-                }
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="telefon">Telefon</Label>
-              <Input
-                id="telefon"
-                type="tel"
-                value={yeniPersonel.telefon}
-                onChange={(e) =>
-                  setYeniPersonel((prev) => ({
-                    ...prev,
-                    telefon: e.target.value,
-                  }))
-                }
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="eposta">E-posta</Label>
-              <Input
-                id="eposta"
-                type="email"
-                value={yeniPersonel.eposta}
-                onChange={(e) =>
-                  setYeniPersonel((prev) => ({
-                    ...prev,
-                    eposta: e.target.value,
-                  }))
-                }
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="adres">Adres</Label>
-              <Input
-                id="adres"
-                value={yeniPersonel.adres}
-                onChange={(e) =>
-                  setYeniPersonel((prev) => ({
-                    ...prev,
-                    adres: e.target.value,
-                  }))
-                }
-                required
-              />
-            </div>
-            <Button 
-              type="submit" 
-              disabled={isLoading} 
-              className="w-full"
-            >
-              {isLoading ? "Kaydediliyor..." : "Personel Kaydı Oluştur"}
-            </Button>
-          </>
-        )}
-      </form>
-    );
-  }
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? "Kaydediliyor..." : (personel ? "Güncelle" : "Kaydet")}
+        </Button>
+      </div>
+    </form>
+  );
 }
