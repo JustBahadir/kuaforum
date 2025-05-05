@@ -49,7 +49,7 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Sağ Bölüm - Giriş ve Arama */}
+          {/* Sağ Bölüm - Giriş */}
           <div className="space-y-8">
             <div className="space-y-4">
               <div className="flex gap-4">
@@ -58,7 +58,7 @@ export default function Landing() {
                   onClick={() => navigate("/auth")}
                 >
                   <Scissors className="mr-2" />
-                  Kuaför Girişi
+                  İşletme Girişi
                 </Button>
               </div>
             </div>

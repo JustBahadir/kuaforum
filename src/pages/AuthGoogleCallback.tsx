@@ -33,57 +33,46 @@ export default function AuthGoogleCallback() {
         // Check if we have a user
         if (!user) {
           console.log("No user found in session");
-          setError("Kullanıcı bilgilerinize erişilemedi. Lütfen tekrar giriş yapın.");
-          setLoading(false);
+          navigate("/auth");
           return;
         }
 
-        // Get the auth mode (login/register)
-        const mode = searchParams.get("mode");
-        console.log("Auth callback mode:", mode, "User:", user.email);
+        console.log("Auth callback - User:", user.email);
 
-        // Check if the profile exists
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("id, role, first_name, last_name")
-          .eq("id", user.id)
+        // Check if the user profile exists and is completed
+        const { data: kullanici, error: kullaniciError } = await supabase
+          .from("kullanicilar")
+          .select("profil_tamamlandi")
+          .eq("kimlik", user.id)
           .maybeSingle();
 
-        // If error fetching profile (not "not found" error)
-        if (profileError && profileError.code !== "PGRST116") {
-          console.error("Profile error:", profileError);
-          setError("Profil bilgilerinize erişilemedi. Lütfen tekrar deneyin.");
-          setLoading(false);
+        if (kullaniciError) {
+          console.error("Kullanıcı bilgileri alınamadı:", kullaniciError);
+        }
+
+        // Redirect to profile setup if not completed
+        if (!kullanici || !kullanici.profil_tamamlandi) {
+          console.log("Profil tamamlanmamış, profil-kurulum sayfasına yönlendiriliyor");
+          navigate("/profil-kurulum", { replace: true });
           return;
         }
 
-        // First time login or registration - redirect to profile setup
-        if (!profile) {
-          console.log("No profile found, redirecting to profile setup");
-          navigate("/profile-setup");
-          return;
-        }
+        // If profile is completed, redirect based on role
+        const { data: kullaniciRol } = await supabase
+          .from("kullanicilar")
+          .select("rol")
+          .eq("kimlik", user.id)
+          .single();
 
-        // Profile exists but first_name and last_name are empty - redirect to profile setup
-        if ((!profile.first_name || !profile.last_name) && profile.first_name !== "0" && profile.last_name !== "0") {
-          console.log("Profile exists but incomplete, redirecting to profile setup");
-          navigate("/profile-setup");
-          return;
-        }
-
-        // Profile complete, redirect based on role - using any to bypass type issues
-        if (profile.role === "admin" || profile.role === "isletme_sahibi") {
-          navigate("/isletme-anasayfa");
-        } else if (profile.role === "staff" || profile.role === "personel") {
-          // For now, just redirect to staff placeholder
-          navigate("/atanmamis-personel");
+        if (kullaniciRol?.rol === "isletme_sahibi") {
+          navigate("/isletme/anasayfa", { replace: true });
         } else {
-          // Default to landing page
-          navigate("/");
+          navigate("/personel/anasayfa", { replace: true });
         }
+
       } catch (error: any) {
         console.error("Auth callback error:", error);
-        setError("Bir hata oluştu: " + error.message);
+        setError(`Bir hata oluştu: ${error.message || "Bilinmeyen hata"}`);
       } finally {
         setLoading(false);
       }
@@ -92,31 +81,34 @@ export default function AuthGoogleCallback() {
     handleCallback();
   }, [navigate, searchParams]);
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-          <Button 
-            onClick={() => navigate("/")} 
-            className="w-full"
-          >
-            Ana Sayfaya Dön
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center p-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 mx-auto mb-4"></div>
-        <p className="text-lg">Giriş yapılıyor...</p>
-        <p className="text-sm text-gray-500">Lütfen bekleyin, yönlendiriliyorsunuz.</p>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-r from-purple-50 to-blue-50">
+      <div className="max-w-md w-full space-y-6 p-8 bg-white shadow-lg rounded-lg">
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-gray-600">Giriş işlemi tamamlanıyor...</p>
+          </div>
+        ) : error ? (
+          <div className="space-y-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <Button 
+              onClick={() => navigate("/auth")} 
+              className="w-full"
+            >
+              Giriş Sayfasına Dön
+            </Button>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <div className="text-green-500 text-4xl mb-4">✓</div>
+            <h2 className="text-2xl font-bold mb-2">Giriş Başarılı</h2>
+            <p className="text-gray-600">Yönlendiriliyorsunuz...</p>
+          </div>
+        )}
       </div>
     </div>
   );

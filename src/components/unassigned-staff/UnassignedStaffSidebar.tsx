@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,7 +9,7 @@ import {
   History,
   Store
 } from "lucide-react";
-import { JoinShopModal } from "./JoinShopModal";
+import JoinShopModal from "./JoinShopModal"; // Correct import statement
 import { formatNameWithTitle, getUserRoleText } from "@/utils/userNameFormatter";
 
 interface TabItem {

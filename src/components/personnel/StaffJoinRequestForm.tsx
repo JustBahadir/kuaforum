@@ -1,129 +1,111 @@
 
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-import { useStaffJoinRequests } from "@/hooks/useStaffJoinRequests";
-import { toast } from "sonner";
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
+import { useJoinRequests } from '@/hooks/useJoinRequests';
+import { supabase } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 
 export function StaffJoinRequestForm() {
-  const { userId } = useCustomerAuth();
-  const { addRequest, data } = useStaffJoinRequests();
-
-  const [shopCode, setShopCode] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [shopCode, setShopCode] = useState('');
+  const [description, setDescription] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { user } = useAuth();
+  const { refetch } = useJoinRequests();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!shopCode.trim()) {
-      toast.error("Lütfen geçerli bir dükkan kodu girin.");
+    
+    if (!user) {
+      toast.error('Kullanıcı girişi yapılmamış!');
       return;
     }
-
-    setLoading(true);
-
+    
+    if (!shopCode.trim()) {
+      toast.error('İşletme kodu gereklidir');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
     try {
-      const responseRaw = await fetch(
-        "/api/dukkanlar?code=" + encodeURIComponent(shopCode.trim())
-      );
-
-      if (!responseRaw.ok) {
-        toast.error("Dükkan bulunamadı, lütfen kodu kontrol edin.");
-        setLoading(false);
+      // Check if the shop code exists
+      const { data: isletme, error: isletmeError } = await supabase
+        .from('isletmeler')
+        .select('kimlik, isletme_adi')
+        .eq('isletme_kodu', shopCode)
+        .single();
+      
+      if (isletmeError || !isletme) {
+        toast.error('Geçersiz işletme kodu. Böyle bir işletme bulunamadı.');
+        setIsSubmitting(false);
         return;
       }
-
-      const response = await responseRaw.json();
-      const dukkanData = response?.dukkanData || response;
-      if (!dukkanData || !Array.isArray(dukkanData) || dukkanData.length === 0) {
-        toast.error("Dükkan bulunamadı, lütfen kodu kontrol edin.");
-        setLoading(false);
+      
+      // Create join request
+      const { error: requestError } = await supabase
+        .from('personel_basvurulari')
+        .insert({
+          kullanici_kimlik: user.id,
+          isletme_kodu: shopCode,
+          durum: 'beklemede',
+          aciklama: description,
+          tarih: new Date().toISOString().split('T')[0]
+        });
+      
+      if (requestError) {
+        console.error('Join request error:', requestError);
+        toast.error('Başvuru gönderilirken bir hata oluştu');
+        setIsSubmitting(false);
         return;
       }
-
-      const dukkan = dukkanData[0];
-
-      if (!userId) {
-        toast.error("Kullanıcı bulunamadı, lütfen giriş yapın.");
-        setLoading(false);
-        return;
-      }
-
-      // Ensure userId is number safely
-      let numericUserId: number;
-      if (typeof userId === "number") {
-        numericUserId = userId;
-      } else if (typeof userId === "string") {
-        const parsedId = Number(userId);
-        if (isNaN(parsedId)) {
-          toast.error("Geçersiz kullanıcı ID");
-          setLoading(false);
-          return;
-        }
-        numericUserId = parsedId;
-      } else {
-        toast.error("Geçersiz kullanıcı ID");
-        setLoading(false);
-        return;
-      }
-
-      // Convert dukkan.id to number safely
-      let numericDukkanId: number;
-      if (typeof dukkan.id === "number") {
-        numericDukkanId = dukkan.id;
-      } else if (typeof dukkan.id === "string") {
-        const parsedId = Number(dukkan.id);
-        if (isNaN(parsedId)) {
-          toast.error("Geçersiz dükkan ID");
-          setLoading(false);
-          return;
-        }
-        numericDukkanId = parsedId;
-      } else {
-        toast.error("Geçersiz dükkan ID");
-        setLoading(false);
-        return;
-      }
-
-      // Check if request already exists for this personel & dükkan
-      const existingRequest = data?.find(
-        (req) =>
-          req.personel_id === numericUserId && req.dukkan_id === numericDukkanId
-      );
-      if (existingRequest) {
-        toast.error("Bu dükkana zaten bir katılım talebiniz var.");
-        setLoading(false);
-        return;
-      }
-
-      await addRequest.mutateAsync({
-        personel_id: numericUserId,
-        dukkan_id: numericDukkanId,
-      });
-
-      toast.success(`Katılım talebiniz "${dukkan.ad}" için gönderildi.`);
-      setShopCode("");
-    } catch (err) {
-      console.error(err);
-      toast.error("Katılım talebi gönderilirken bir hata oluştu.");
+      
+      toast.success(`"${isletme.isletme_adi}" işletmesine başvurunuz gönderildi. İşletme sahibinin onayı bekleniyor.`);
+      
+      // Reset form
+      setShopCode('');
+      setDescription('');
+      
+      // Refresh join requests list
+      refetch();
+    } catch (error) {
+      console.error('Submit error:', error);
+      toast.error('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
-      <Label htmlFor="shopCode">Dükkan Kodu ile Katıl</Label>
-      <Input
-        id="shopCode"
-        placeholder="Dükkan kodunu girin"
-        value={shopCode}
-        onChange={(e) => setShopCode(e.target.value)}
-      />
-      <Button type="submit" disabled={loading}>
-        {loading ? "Gönderiliyor..." : "Talep Gönder"}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="shopCode">İşletme Kodu</Label>
+        <Input
+          id="shopCode"
+          value={shopCode}
+          onChange={(e) => setShopCode(e.target.value)}
+          placeholder="İşletme kodunu giriniz"
+          required
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="description">Açıklama (İsteğe Bağlı)</Label>
+        <Textarea
+          id="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Eklemek istediğiniz bilgiler"
+          rows={3}
+        />
+      </div>
+      
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? 'Gönderiliyor...' : 'Başvuru Gönder'}
       </Button>
     </form>
   );

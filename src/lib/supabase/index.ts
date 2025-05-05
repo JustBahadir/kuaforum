@@ -17,7 +17,8 @@ export type {
   Musteri,
   Randevu,
   PersonelBasvuru,
-  CalismaSaati
+  CalismaSaati,
+  Profil
 } from './types';
 
 // Import temporary types while migration is in progress
@@ -27,8 +28,15 @@ export type {
   PersonelGecmis,
   ProfileUpdateData,
   StaffJoinRequest,
-  Profil
 } from './temporaryTypes';
 
 // Service exports
 export { calismaSaatleriServisi } from './services/calismaSaatleriServisi';
+export { islemServisi } from './services/islemServisi';
+export { kategoriServisi } from './services/kategoriServisi';
+export { isletmeServisi } from './services/isletmeServisi';
+export { personelServisi } from './services/personelServisi';
+export { musteriServisi } from './services/musteriServisi';
+export { randevuServisi } from './services/randevuServisi';
+export { personelIslemleriServisi } from './services/personelIslemleriServisi';
+

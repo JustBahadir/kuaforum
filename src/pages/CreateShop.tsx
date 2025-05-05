@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +20,15 @@ export default function CreateShop() {
     isletmeIl: '',
     isletmeAcikAdres: '',
     isletmeTelefon: '',
+    acilisGunleri: {
+      pazartesi: { acilis: "09:00", kapanis: "18:00", kapali: false },
+      sali: { acilis: "09:00", kapanis: "18:00", kapali: false },
+      carsamba: { acilis: "09:00", kapanis: "18:00", kapali: false },
+      persembe: { acilis: "09:00", kapanis: "18:00", kapali: false },
+      cuma: { acilis: "09:00", kapanis: "18:00", kapali: false },
+      cumartesi: { acilis: "09:00", kapanis: "18:00", kapali: false },
+      pazar: { acilis: "10:00", kapanis: "16:00", kapali: true },
+    }
   });
 
   // List of Turkish cities from CityISOCodes

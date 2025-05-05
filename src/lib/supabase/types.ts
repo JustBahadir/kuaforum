@@ -71,6 +71,11 @@ export interface Musteri {
   dogum_tarihi: string | null;
   created_at: string;
   updated_at: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  birthdate?: string;
+  id?: string;
 }
 
 export interface Randevu {
@@ -97,19 +102,33 @@ export interface PersonelBasvuru {
   tarih: string;
 }
 
-// Adding RandevuDurumu alias for compatibility with existing code
-export type RandevuDurumu = RandevuDurum;
-
 // Adding CalismaSaati type for compatibility
 export interface CalismaSaati {
   id: string;
-  dukkan_id: string;
+  isletme_id: string;
   gun: string;
   acilis: string;
   kapanis: string;
   kapali: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// Adding Profil type
+export interface Profil {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  gender?: string;
+  shopname?: string;
+  role?: string;
+  birthdate?: string;
+  avatar_url?: string;
+  address?: string;
+  iban?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Tam adları göstermek için yardımcı fonksiyon
@@ -133,3 +152,4 @@ export const durum = {
 
 // For Supabase client
 export interface Database {}
+

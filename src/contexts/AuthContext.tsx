@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 import { toast } from "sonner";
-import { KullaniciRol } from "@/lib/supabase/temporaryTypes";
+import { KullaniciRol } from "@/lib/supabase/types";
 
 interface AuthContextType {
   session: Session | null;
@@ -12,6 +12,13 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  // Adding required fields for compatibility
+  isAuthenticated: boolean;
+  userName: string;
+  profileData: any;
+  handleLogout: () => Promise<void>;
+  userId?: string;
+  activeTab?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,6 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<KullaniciRol | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileData, setProfileData] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<string>("dashboard");
 
   useEffect(() => {
     async function loadUserAndSession() {
@@ -34,8 +43,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (newSession?.user) {
               await loadUserRole(newSession.user.id);
+              await loadProfileData(newSession.user.id);
             } else {
               setUserRole(null);
+              setProfileData(null);
             }
           }
         );
@@ -47,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (sessionData.session?.user) {
           setUser(sessionData.session.user);
           await loadUserRole(sessionData.session.user.id);
+          await loadProfileData(sessionData.session.user.id);
         }
 
         setLoading(false);
@@ -79,6 +91,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error("Role loading error:", error);
+    }
+  }
+
+  async function loadProfileData(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from("kullanicilar")
+        .select("*")
+        .eq("kimlik", userId)
+        .single();
+
+      if (error) {
+        console.error("Profil bilgileri alınamadı:", error);
+        return;
+      }
+
+      setProfileData(data);
+    } catch (error) {
+      console.error("Profile loading error:", error);
     }
   }
 
@@ -116,6 +147,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const isAuthenticated = !!session;
+  const userName = profileData ? `${profileData.ad} ${profileData.soyad}` : "";
+  const userId = user?.id;
+
+  const handleLogout = async () => {
+    await signOut();
+  };
+
   const value = {
     session,
     user,
@@ -123,6 +162,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signInWithGoogle,
     signOut,
+    isAuthenticated,
+    userName,
+    profileData,
+    handleLogout,
+    userId,
+    activeTab,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -2,8 +2,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InfoIcon } from "lucide-react";
 
 interface LoginTabsProps {
   onSuccess: () => void;
@@ -25,13 +23,6 @@ export function LoginTabs({ onSuccess }: LoginTabsProps) {
           className="w-full"
           redirectTo={window.location.origin + "/auth-google-callback?mode=login"}
         />
-        
-        <Alert className="bg-blue-50 border-blue-200">
-          <InfoIcon className="h-4 w-4 text-blue-500" />
-          <AlertDescription className="text-blue-700">
-            Yakında Apple ile giriş özelliği de eklenecektir.
-          </AlertDescription>
-        </Alert>
       </TabsContent>
       
       <TabsContent value="register" className="space-y-4">
@@ -40,13 +31,6 @@ export function LoginTabs({ onSuccess }: LoginTabsProps) {
           className="w-full"
           redirectTo={window.location.origin + "/auth-google-callback?mode=register"}
         />
-        
-        <Alert className="bg-blue-50 border-blue-200">
-          <InfoIcon className="h-4 w-4 text-blue-500" />
-          <AlertDescription className="text-blue-700">
-            Yakında Apple ile kayıt özelliği de eklenecektir.
-          </AlertDescription>
-        </Alert>
       </TabsContent>
     </Tabs>
   );
