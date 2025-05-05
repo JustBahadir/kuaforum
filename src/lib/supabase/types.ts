@@ -52,7 +52,7 @@ export interface Isletme extends BaseEntity {
 
 export interface Personel extends BaseEntity {
   kimlik: string;
-  id: string | number; // ID can be string or number depending on context
+  id: string; // Previously could be string or number, standardizing to string
   kullanici_kimlik?: string;
   isletme_id: string;
   ad_soyad: string;
@@ -75,11 +75,11 @@ export interface Personel extends BaseEntity {
   // Backward compatibility fields
   birth_date?: string;
   auth_id?: string;
-  dukkan_id?: string | number;
+  dukkan_id?: string;
 }
 
 export interface IslemKategorisi extends BaseEntity {
-  id: string | number;
+  id: string;
   kimlik: string;
   kategori_adi: string;
   baslik: string;
@@ -90,7 +90,7 @@ export interface IslemKategorisi extends BaseEntity {
 }
 
 export interface Hizmet extends BaseEntity {
-  id: string | number;
+  id: string;
   kimlik: string;
   islem_adi: string;
   hizmet_adi: string;
@@ -98,7 +98,7 @@ export interface Hizmet extends BaseEntity {
   fiyat: number;
   suresi?: number;
   sure_dakika?: number;
-  kategori_id: string | number;
+  kategori_id: string;
   kategori_kimlik?: string;
   isletme_id: string;
   isletme_kimlik: string;
@@ -110,7 +110,7 @@ export interface Hizmet extends BaseEntity {
 
 export interface Musteri extends BaseEntity {
   kimlik: string;
-  id?: string | number;
+  id?: string;
   isletme_id: string;
   ad_soyad: string;
   telefon?: string;
@@ -132,16 +132,16 @@ export interface Musteri extends BaseEntity {
   birthdate?: string;
   address?: string;
   email?: string;
-  dukkan_id?: string | number;
+  dukkan_id?: string;
 }
 
 export interface Randevu extends BaseEntity {
-  id: string | number;
+  id: string;
   kimlik: string;
   isletme_id: string;
-  musteri_id: string | number;
+  musteri_id: string;
   musteri_kimlik: string;
-  personel_id: string | number;
+  personel_id: string;
   personel_kimlik?: string;
   tarih: string;
   saat: string;
@@ -155,11 +155,11 @@ export interface Randevu extends BaseEntity {
   
   // Backward compatibility fields
   hizmet_kimlik?: string; // For compatibility with customer dashboard
-  dukkan_id?: string | number;
+  dukkan_id?: string;
 }
 
 export interface PersonelBasvuru extends BaseEntity {
-  id: string | number;
+  id: string;
   kullanici_kimlik: string;
   isletme_id?: string;
   isletme_kodu?: string;
@@ -171,7 +171,7 @@ export interface PersonelBasvuru extends BaseEntity {
 }
 
 export interface CalismaSaati extends BaseEntity {
-  id: string | number;
+  id: string;
   isletme_id: string;
   gun: string;
   acilis: string;
@@ -202,15 +202,15 @@ export interface Profil extends BaseEntity {
   role?: string;
   birthdate?: string;
   iban?: string;
-  dukkan_id?: string | number;
+  dukkan_id?: string;
 }
 
 export interface PersonelIslemi extends BaseEntity {
-  id: string | number;
-  personel_id: string | number;
-  islem_id: string | number;
-  musteri_id: string | number;
-  randevu_id?: string | number;
+  id: string;
+  personel_id: string;
+  islem_id: string;
+  musteri_id: string;
+  randevu_id?: string;
   tutar: number;
   odenen: number;
   prim_yuzdesi: number;
