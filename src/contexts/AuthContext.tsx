@@ -45,6 +45,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (newSession?.user) {
               await loadUserRole(newSession.user.id);
               await loadProfileData(newSession.user.id);
+              
+              // If this is a new sign-in, attempt to create user in kullanicilar table
+              if (event === 'SIGNED_IN') {
+                try {
+                  const { data: existingUser } = await supabase
+                    .from('kullanicilar')
+                    .select('*')
+                    .eq('auth_id', newSession.user.id)
+                    .maybeSingle();
+                  
+                  if (!existingUser) {
+                    // User doesn't exist in kullanicilar table
+                    console.log("New user signed in, calling handle-user-signup function");
+                    
+                    // Call our edge function to create the user
+                    const response = await fetch(
+                      `${supabase.supabaseUrl}/functions/v1/handle-user-signup`,
+                      {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${newSession.access_token}`
+                        },
+                        body: JSON.stringify({ userId: newSession.user.id })
+                      }
+                    );
+                    
+                    const result = await response.json();
+                    console.log("User creation result:", result);
+                  }
+                } catch (err) {
+                  console.error("Error checking/creating user profile:", err);
+                }
+              }
             } else {
               setUserRole(null);
               setProfileData(null);
@@ -78,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: kullanici, error } = await supabase
         .from("kullanicilar")
         .select("rol")
-        .eq("kimlik", userId)
+        .eq("auth_id", userId)
         .single();
 
       if (error) {
@@ -100,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from("kullanicilar")
         .select("*")
-        .eq("kimlik", userId)
+        .eq("auth_id", userId)
         .single();
 
       if (error) {
@@ -119,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth-callback`,
+          redirectTo: `${window.location.origin}/auth-google-callback`,
         },
       });
 
