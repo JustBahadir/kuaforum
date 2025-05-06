@@ -9,7 +9,161 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      isletmeler: {
+        Row: {
+          ad: string
+          adres: string | null
+          created_at: string | null
+          eposta: string | null
+          id: string
+          kimlik: string | null
+          kod: string | null
+          sahip_kimlik: string | null
+          telefon: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ad: string
+          adres?: string | null
+          created_at?: string | null
+          eposta?: string | null
+          id?: string
+          kimlik?: string | null
+          kod?: string | null
+          sahip_kimlik?: string | null
+          telefon?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ad?: string
+          adres?: string | null
+          created_at?: string | null
+          eposta?: string | null
+          id?: string
+          kimlik?: string | null
+          kod?: string | null
+          sahip_kimlik?: string | null
+          telefon?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      kullanicilar: {
+        Row: {
+          ad: string | null
+          auth_id: string | null
+          created_at: string | null
+          eposta: string | null
+          id: string
+          kimlik: string | null
+          profil_tamamlandi: boolean | null
+          rol: string | null
+          soyad: string | null
+          telefon: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ad?: string | null
+          auth_id?: string | null
+          created_at?: string | null
+          eposta?: string | null
+          id?: string
+          kimlik?: string | null
+          profil_tamamlandi?: boolean | null
+          rol?: string | null
+          soyad?: string | null
+          telefon?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ad?: string | null
+          auth_id?: string | null
+          created_at?: string | null
+          eposta?: string | null
+          id?: string
+          kimlik?: string | null
+          profil_tamamlandi?: boolean | null
+          rol?: string | null
+          soyad?: string | null
+          telefon?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      personel: {
+        Row: {
+          ad_soyad: string
+          adres: string | null
+          auth_id: string | null
+          avatar_url: string | null
+          birth_date: string | null
+          calisma_sistemi: string | null
+          created_at: string | null
+          dukkan_id: number | null
+          eposta: string | null
+          iban: string | null
+          id: number
+          isletme_id: string | null
+          kimlik: string | null
+          kullanici_kimlik: string | null
+          maas: number | null
+          personel_no: string | null
+          prim_yuzdesi: number | null
+          telefon: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ad_soyad: string
+          adres?: string | null
+          auth_id?: string | null
+          avatar_url?: string | null
+          birth_date?: string | null
+          calisma_sistemi?: string | null
+          created_at?: string | null
+          dukkan_id?: number | null
+          eposta?: string | null
+          iban?: string | null
+          id?: number
+          isletme_id?: string | null
+          kimlik?: string | null
+          kullanici_kimlik?: string | null
+          maas?: number | null
+          personel_no?: string | null
+          prim_yuzdesi?: number | null
+          telefon?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ad_soyad?: string
+          adres?: string | null
+          auth_id?: string | null
+          avatar_url?: string | null
+          birth_date?: string | null
+          calisma_sistemi?: string | null
+          created_at?: string | null
+          dukkan_id?: number | null
+          eposta?: string | null
+          iban?: string | null
+          id?: number
+          isletme_id?: string | null
+          kimlik?: string | null
+          kullanici_kimlik?: string | null
+          maas?: number | null
+          personel_no?: string | null
+          prim_yuzdesi?: number | null
+          telefon?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personel_isletme_id_fkey"
+            columns: ["isletme_id"]
+            isOneToOne: false
+            referencedRelation: "isletmeler"
+            referencedColumns: ["kimlik"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

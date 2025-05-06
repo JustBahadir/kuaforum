@@ -108,7 +108,7 @@ export default function KayitFormu() {
           telefon: formData.telefon,
           rol: formData.rol,
           profil_tamamlandi: true,
-          email: userData.email,
+          eposta: userData.email,
           kimlik: userData.id, // Using auth ID as kimlik
         })
         .select()

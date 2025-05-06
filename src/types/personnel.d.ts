@@ -38,6 +38,7 @@ export interface PersonnelListProps {
   personel: Personel[];
   onEdit: (personel: Personel) => void;
   isLoading: boolean;
+  onRefresh?: () => void;
 }
 
 export interface ServiceCategoryFormProps {
