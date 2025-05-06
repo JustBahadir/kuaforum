@@ -41,6 +41,19 @@ export interface PersonnelListProps {
   onRefresh?: () => void;
 }
 
+export interface PersonnelDeleteDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  personnel: Personel;
+}
+
+export interface PersonnelPerformanceProps {
+  personel: Personel[];
+  onEdit: (personel: Personel) => void;
+  isLoading: boolean;
+}
+
 export interface ServiceCategoryFormProps {
   dukkanId: string;
   isletmeId?: string; // For backward compatibility

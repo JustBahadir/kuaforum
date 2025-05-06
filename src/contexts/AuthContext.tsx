@@ -61,7 +61,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     
                     // Call our edge function to create the user
                     const response = await fetch(
-                      `${supabase.supabaseUrl}/functions/v1/handle-user-signup`,
+                      // Fixed the URL construction
+                      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/handle-user-signup`,
                       {
                         method: 'POST',
                         headers: {
