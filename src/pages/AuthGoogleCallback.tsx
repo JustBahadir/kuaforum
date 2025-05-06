@@ -35,6 +35,7 @@ export default function AuthGoogleCallback() {
         if (!data.user) {
           console.log("No user found in session");
           setError("Giriş bilgileri alınamadı. Lütfen tekrar giriş yapın.");
+          navigate("/login", { replace: true });
           setLoading(false);
           return;
         }
@@ -50,22 +51,31 @@ export default function AuthGoogleCallback() {
 
         if (kullaniciError && kullaniciError.code !== 'PGRST116') {
           console.error("Error fetching user from kullanicilar:", kullaniciError);
+          setError("Kullanıcı bilgilerinize erişilirken bir hata oluştu.");
+          setLoading(false);
+          return;
         }
         
-        // If user doesn't exist and came from registration flow
+        // If user doesn't exist and came from registration flow or login flow
         if (!kullanici) {
           console.log("No profile found, mode:", mode);
           
-          if (mode === "register") {
-            // Directly redirect to profile setup
-            navigate("/kayit-formu", { replace: true });
-            return;
-          } else {
-            // Show account not found for login attempts
-            setAccountNotFound(true);
-            setLoading(false);
-            return;
+          // Try to create a user profile automatically using edge function
+          try {
+            const { error: edgeFuncError } = await supabase.functions.invoke('handle-user-signup', {
+              body: { userId: data.user.id }
+            });
+            
+            if (edgeFuncError) {
+              console.error("Error creating initial user profile:", edgeFuncError);
+            }
+          } catch (edgeFuncErr) {
+            console.error("Failed to invoke edge function:", edgeFuncErr);
           }
+          
+          // Redirect to profile setup regardless
+          navigate("/kayit-formu", { replace: true });
+          return;
         }
         
         // If user exists in kullanicilar table

@@ -2,8 +2,9 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { AccountNotFoundProps } from "@/types/personnel";
 
-export default function AccountNotFound() {
+export default function AccountNotFound({ accountExists = false }: AccountNotFoundProps) {
   const navigate = useNavigate();
 
   return (

@@ -60,21 +60,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     console.log("New user signed in, calling handle-user-signup function");
                     
                     // Call our edge function to create the user
-                    const response = await fetch(
-                      // Fixed the URL construction
-                      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/handle-user-signup`,
-                      {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${newSession.access_token}`
-                        },
-                        body: JSON.stringify({ userId: newSession.user.id })
-                      }
-                    );
-                    
-                    const result = await response.json();
-                    console.log("User creation result:", result);
+                    try {
+                      await supabase.functions.invoke('handle-user-signup', {
+                        body: { userId: newSession.user.id }
+                      });
+                    } catch (error) {
+                      console.error("Error calling handle-user-signup function:", error);
+                    }
                   }
                 } catch (err) {
                   console.error("Error checking/creating user profile:", err);

@@ -52,8 +52,8 @@ export function useRegistrationForm() {
           .eq("auth_id", data.user.id)
           .maybeSingle();
         
-        if (existingProfile) {
-          // User already has a profile, redirect to appropriate page
+        if (existingProfile && existingProfile.profil_tamamlandi) {
+          // User already has a completed profile, redirect to appropriate page
           if (existingProfile.rol === "isletme_sahibi") {
             navigate("/isletme/anasayfa", { replace: true });
           } else if (existingProfile.rol === "personel") {
@@ -66,7 +66,18 @@ export function useRegistrationForm() {
 
         // Populate form with user data from Google if available
         setUserData(data.user);
-        if (data.user.user_metadata) {
+        
+        // Check if existing profile has some data (partially completed)
+        if (existingProfile) {
+          setFormData(prev => ({
+            ...prev,
+            ad: existingProfile.ad || "",
+            soyad: existingProfile.soyad || "",
+            telefon: existingProfile.telefon || "",
+            rol: existingProfile.rol || "musteri",
+          }));
+        } else if (data.user.user_metadata) {
+          // If no existing profile, use data from Google auth
           const { name = "", email = "" } = data.user.user_metadata;
           const nameParts = name.split(" ");
           
@@ -107,23 +118,45 @@ export function useRegistrationForm() {
     setSubmitting(true);
     
     try {
-      // Create user profile in kullanicilar table
-      const { data, error } = await supabase
+      // Check if user already exists in kullanicilar table
+      const { data: existingUser } = await supabase
         .from("kullanicilar")
-        .insert({
-          auth_id: userData.id,
-          ad: formData.ad,
-          soyad: formData.soyad,
-          telefon: formData.telefon,
-          rol: formData.rol,
-          profil_tamamlandi: true,
-          eposta: userData.email,
-          kimlik: userData.id, // Using auth ID as kimlik
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+        .select("*")
+        .eq("auth_id", userData.id)
+        .maybeSingle();
+      
+      if (existingUser) {
+        // Update existing user profile
+        const { error: updateError } = await supabase
+          .from("kullanicilar")
+          .update({
+            ad: formData.ad,
+            soyad: formData.soyad,
+            telefon: formData.telefon,
+            rol: formData.rol,
+            profil_tamamlandi: true,
+            eposta: userData.email,
+          })
+          .eq("auth_id", userData.id);
+        
+        if (updateError) throw updateError;
+      } else {
+        // Create new user profile
+        const { error: insertError } = await supabase
+          .from("kullanicilar")
+          .insert({
+            auth_id: userData.id,
+            ad: formData.ad,
+            soyad: formData.soyad,
+            telefon: formData.telefon,
+            rol: formData.rol,
+            profil_tamamlandi: true,
+            eposta: userData.email,
+            kimlik: userData.id, // Using auth ID as kimlik
+          });
+          
+        if (insertError) throw insertError;
+      }
       
       toast.success("Profiliniz başarıyla oluşturuldu");
       

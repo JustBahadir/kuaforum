@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -255,7 +254,7 @@ export default function StaffOperations() {
           
           {kategoriDialogAcik && (
             <CategoryForm
-              dukkanId={isletmeId}
+              dukkanId={isletme?.id || ""}
               kategori={seciliKategori}
               onSuccess={handleCategorySuccess}
               onCancel={() => setKategoriDialogAcik(false)}
