@@ -1,4 +1,3 @@
-
 // Personnel
 export interface Personel {
   id: string | number;
