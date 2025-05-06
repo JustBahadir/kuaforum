@@ -1,120 +1,129 @@
 
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus } from "lucide-react";
 import { PersonnelList } from "./components/PersonnelList";
 import { PersonnelDialog } from "./components/PersonnelDialog";
-import { usePersonnel } from "@/hooks/usePersonnel";
-import { useAuth } from "@/hooks/useAuth";
-import { PendingStaffRequests } from "./PendingStaffRequests";
+import { PersonnelDeleteDialog } from "./components/PersonnelDeleteDialog";
+import { PersonnelPerformance } from "./components/PersonnelPerformance";
+import PendingStaffRequests from "./PendingStaffRequests";
 import { Personel } from "@/types/personnel";
+import { usePersonnel } from "@/hooks/usePersonnel";
 
 export default function Personnel() {
-  const [activeTab, setActiveTab] = useState<string>("all");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { data, isLoading, refetch } = usePersonnel();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPersonnel, setSelectedPersonnel] = useState<Personel | null>(null);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const { isletmeId } = useAuth();
-  const { personel, loading, yenile } = usePersonnel();
+  const [activeTab, setActiveTab] = useState("all");
 
-  // Handle opening the dialog for adding new personnel
-  const handleAddPersonnel = () => {
-    setSelectedPersonnel(null);
-    setIsEditMode(false);
-    setIsDialogOpen(true);
-  };
-
-  // Handle opening the dialog for editing personnel
   const handleEditPersonnel = (personnel: Personel) => {
     setSelectedPersonnel(personnel);
-    setIsEditMode(true);
-    setIsDialogOpen(true);
+    setDialogOpen(true);
   };
 
-  // Handle the dialog being closed
-  const handleDialogClose = () => {
-    setIsDialogOpen(false);
+  const handleDeletePersonnel = (personnel: Personel) => {
+    setSelectedPersonnel(personnel);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleAddNewPersonnel = () => {
     setSelectedPersonnel(null);
+    setDialogOpen(true);
   };
 
-  // Handle the dialog submission being successful
-  const handleDialogSuccess = () => {
-    yenile();
-    setIsDialogOpen(false);
-    setSelectedPersonnel(null);
-  };
-
-  // Function to filter personnel based on active tab
-  const filteredPersonnel = () => {
-    if (!personel) return [];
-    
-    if (activeTab === "all") return personel;
-    if (activeTab === "active") return personel.filter(p => p.durum !== "pasif");
-    if (activeTab === "inactive") return personel.filter(p => p.durum === "pasif");
-    
-    return personel;
-  };
+  const filteredPersonnel = data ? data.filter((p) => {
+    if (activeTab === "all") return true;
+    // Add more filters as needed
+    return true;
+  }) : [];
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container px-4 py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Personel Yönetimi</h1>
-        <Button onClick={handleAddPersonnel} className="flex items-center">
-          <Plus className="mr-2 h-4 w-4" />
-          Yeni Personel Ekle
-        </Button>
+        <Button onClick={handleAddNewPersonnel}>Yeni Personel Ekle</Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="grid w-full md:w-auto grid-cols-3 md:flex">
+      <Tabs
+        defaultValue="all"
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
+        <TabsList className="grid grid-cols-3 mb-8">
           <TabsTrigger value="all">Tüm Personel</TabsTrigger>
-          <TabsTrigger value="active">Aktif</TabsTrigger>
-          <TabsTrigger value="inactive">Pasif</TabsTrigger>
-          <TabsTrigger value="requests">Katılım İstekleri</TabsTrigger>
+          <TabsTrigger value="performance">Performans</TabsTrigger>
+          <TabsTrigger value="requests">Başvurular</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all" className="pt-4">
-          <PersonnelList 
-            personnel={filteredPersonnel() as any[]} 
-            onEdit={handleEditPersonnel}
-            isLoading={loading}
-          />
+        <TabsContent value="all">
+          <Card>
+            <CardHeader>
+              <CardTitle>Personel Listesi</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PersonnelList
+                personel={filteredPersonnel}
+                onEdit={handleEditPersonnel}
+                isLoading={isLoading}
+                onRefresh={refetch}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="active" className="pt-4">
-          <PersonnelList 
-            personnel={filteredPersonnel() as any[]}
-            onEdit={handleEditPersonnel}
-            isLoading={loading}
-          />
+        <TabsContent value="performance">
+          <Card>
+            <CardHeader>
+              <CardTitle>Personel Performansı</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PersonnelPerformance
+                personel={filteredPersonnel}
+                onEdit={handleEditPersonnel}
+                isLoading={isLoading}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="inactive" className="pt-4">
-          <PersonnelList 
-            personnel={filteredPersonnel() as any[]}
-            onEdit={handleEditPersonnel}
-            isLoading={loading}
-          />
-        </TabsContent>
-
-        <TabsContent value="requests" className="pt-4">
-          <PendingStaffRequests 
-            dukkanId={isletmeId || ""} 
-            onRequestAccepted={yenile}
-          />
+        <TabsContent value="requests">
+          <Card>
+            <CardHeader>
+              <CardTitle>Personel Başvuruları</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PendingStaffRequests />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
-      {isDialogOpen && (
-        <PersonnelDialog
-          isOpen={isDialogOpen}
-          onClose={handleDialogClose}
-          onSuccess={handleDialogSuccess}
+      {selectedPersonnel && (
+        <PersonnelDeleteDialog
+          isOpen={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+          onSuccess={() => {
+            setDeleteDialogOpen(false);
+            refetch();
+          }}
           personnel={selectedPersonnel}
-          isEditMode={isEditMode}
         />
       )}
+
+      <PersonnelDialog
+        isOpen={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSuccess={() => {
+          setDialogOpen(false);
+          refetch();
+        }}
+        personnel={selectedPersonnel || undefined}
+        isEditMode={!!selectedPersonnel}
+      />
     </div>
   );
 }

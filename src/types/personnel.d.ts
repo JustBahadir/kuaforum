@@ -1,7 +1,7 @@
 
 export interface Personel {
-  id: string;
-  dukkan_id: string;
+  id: string | number;
+  dukkan_id: string | number;
   auth_id?: string;
   eposta: string;
   telefon: string;
